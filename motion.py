@@ -11,16 +11,17 @@ import subprocess
 import ConfigParser
 import sys
 
-ERROR           = 50
-WARNING         = 40
-INFORMATION     = 30
-DEBUGGING       = 20
+LVL_NONE            = 70
+LVL_CRITICAL        = 60
+LVL_ERROR           = 50
+LVL_WARNING         = 40
+LVL_INFORMATION     = 30
+LVL_DEBUGGING       = 20
+LVL_ALL             = 10
 
-DBG_LVL_OFF   = 0 # all off
-DBG_LVL_DISP  = 1 # on display only
-DBG_LVL_DATA  = 2 # display and log data for table
-DBG_LVL_EVENT = 3 # display also events in log file
-DEBUG = DBG_LVL_DISP
+DEBUG = LVL_INFORMATION
+
+TRACE       = 0
 
 LEFT  = 0
 RIGHT = 1
@@ -59,7 +60,7 @@ def resetEncoder():
     #global encoderR, encoderL
     global leftEncoderZero, rightEncoderZero
 
-    logEvent("Reset encoder")
+    logEvent(LVL_INFORMATION, "Reset encoder")
     #encoderL = 0
     #encoderR = 0
     leftEncoderZero += encoderL
@@ -68,7 +69,7 @@ def resetEncoder():
 def readIni():
     global OFFSETS
 
-    logEvent("Read ini file")
+    logEvent(LVL_INFORMATION, "Read ini file")
     Config = ConfigParser.ConfigParser()
     Config.read("config.ini")
     OFFSETS[LEFT] = Config.getint('motor', 'offset_left')
@@ -77,27 +78,33 @@ def readIni():
     #print("Offset Left: "+str(OFFSETS[LEFT]))
 
 def initLog():
-    if(DEBUG > DBG_LVL_DISP):
-        f= open("trace.txt","w+")
-        f.write("timestamp;pwmL;pwmR;speedL;speedR;encoderL;encoderR\r\n")
+    global logfile
+    if(DEBUG < LVL_NONE):
+        logfile = open("robot.log","w+")
+        logfile.write("Starting session\r\n")
 
-def logTrace():
-    if (DEBUG > DBG_LVL_OFF):
+def initTrace():
+    global tracefile
+    if(TRACE == 1):
+        tracefile = open("trace.txt","w+")
+        tracefile.write("timestamp;pwmL;pwmR;speedL;speedR;encoderL;encoderR\r\n")
+
+def writeTrace():
+    if (DEBUG <= LVL_DEBUGGING):
         print("pwmL: "+str(pwmL)+", pwmR: "+str(pwmR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
-    if (DEBUG > DBG_LVL_DISP):
-        f.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedL)+";"+str(speedR)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
+    if (TRACE == 1):
+        tracefile.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedL)+";"+str(speedR)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
 
-def logEvent(event):
-    if (DEBUG > DBG_LVL_OFF):
+def logEvent(level, event):
+    if (level >= LVL_INFORMATION):
         print event
-    if (DEBUG >= DBG_LVL_EVENT):
-        f.write(str(time.time()) + ";" + event + "\r\n")
+        logfile.write(str(time.time()) + ";" + event + "\r\n")
 
 def readCommand():
     global state
 
     c = raw_input("""Command (man, ctrl, cal, exit, )?: """)
-    logEvent("Command by user: " + str(c))
+    logEvent(LVL_INFORMATION, "Command by user: " + str(c))
     if(c == "man"):
         state = MANUAL
     elif(c == "ctrl"):
@@ -119,10 +126,10 @@ def readEncoder():
         encoderR = int(data[2]) - rightEncoderZero
         speedL = int(data[3])
         speedR = int(data[4])
-        logTrace()
+        writeTrace()
         success = True
     if(data[0] == "DBG"):
-        logEvent(line)
+        logEvent(LVL_DEBUGGING, line)
     return success
 
 # Main script
@@ -155,6 +162,7 @@ pl = 0 # power in PWM unit
 pr = 0 # power in PWM unit
 
 initLog()
+logEvent(LVL_INFORMATION, "Starting session")
 readIni()
 
 #
@@ -170,6 +178,7 @@ try:
             time.sleep(0.1)
             state = EXIT
         elif(state==MANUAL):
+            logEvent(LVL_INFORMATION, "Starting manual mode")
             pl = input("power left ?")
             pr = input("power right ?")
             duration = input("duration ?")
@@ -183,7 +192,7 @@ try:
             freerun()
             state = IDLE
         elif(state==CONTROL):
-            print("Control state")
+            logEvent(LVL_INFORMATION, "Starting Control mode")
             #control(5, 5, 30, 60)
             s  = input("speed ?")
             #pl = input("steps left ?")
@@ -202,10 +211,26 @@ try:
                     elif(speedR > int(s)+15):
                         pr = pr - 1
                     run(pl, pr)
-            freerun()
             state = EXIT
         elif(state==CALIB):
-            pass
+            logEvent(LVL_INFORMATION, "Starting calibration mode")
+            ser.flushInput()
+            for i in range(-15, 15):
+                t = time.time()
+                meanSpeedLeft  = 0
+                meanSpeedRight = 0
+                nb_values = 0
+                run(i, i)
+                while((time.time() - t) < 3):
+                    if(readEncoder() == True):
+                        meanSpeedLeft  += speedL
+                        meanSpeedRight += speedR
+                        nb_values += 1
+                        logEvent(LVL_DEBUGGING, "CAL: Left [PWM="+str(i)+"; speed="+str(speedL)+"], Right [PWM="+str(i)+"; speed="+str(speedR)+"]")
+                meanSpeedLeft = meanSpeedLeft/nb_values
+                meanSpeedRight = meanSpeedRight/nb_values
+                logEvent(LVL_INFORMATION, "CAL: Left [PWM="+str(i)+"; speed="+str(meanSpeedLeft)+"], Right [PWM="+str(i)+"; speed="+str(meanSpeedRight)+"]")
+            state = EXIT
         elif(state==EXIT):
             #print "State EXIT"
             #state = IDLE
@@ -213,7 +238,7 @@ try:
             ser.close()
             break
         if(state != lastState):
-            logEvent("State change to: " + str(state))
+            logEvent(LVL_INFORMATION, "State change to: " + str(state))
         lastState = state
 
 # Cyclic statements
@@ -224,5 +249,7 @@ except KeyboardInterrupt:
     #GPIO.cleanup()
     freerun()
     ser.close()
-    if(DEBUG > DBG_LVL_DISP):
-        f.close()
+    if(DEBUG < LVL_NONE):
+        logfile.close()
+    if(TRACE == 1):
+        tracefile.close()
