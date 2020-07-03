@@ -11,7 +11,16 @@ import subprocess
 import ConfigParser
 import sys
 
-DEBUG = 0
+ERROR           = 50
+WARNING         = 40
+INFORMATION     = 30
+DEBUGGING       = 20
+
+DBG_LVL_OFF   = 0 # all off
+DBG_LVL_DISP  = 1 # on display only
+DBG_LVL_DATA  = 2 # display and log data for table
+DBG_LVL_EVENT = 3 # display also events in log file
+DEBUG = DBG_LVL_DISP
 
 LEFT  = 0
 RIGHT = 1
@@ -32,7 +41,8 @@ INIT    = 7
 OFFSETS = [0, 0]    # overwritten by ini file settings
 MIDDLE = 400        # overwritten by ini file settings
 
-
+# low level abstraction
+# l, r: PWMs (direction, middle point and offset are corrected here)
 def run(l, r):
     global pwmL, pwmR
     pwmL = MIDDLE + OFFSETS[LEFT] + l
@@ -46,14 +56,19 @@ def freerun():
     pwm.set_pwm(RIGHT, 0, 0)
 
 def resetEncoder():
-    global encoderR, encoderL
+    #global encoderR, encoderL
+    global leftEncoderZero, rightEncoderZero
 
-    print("Reset encoder")
-    encoderL = 0
-    encoderR = 0
+    logEvent("Reset encoder")
+    #encoderL = 0
+    #encoderR = 0
+    leftEncoderZero += encoderL
+    rightEncoderZero += encoderR
 
 def readIni():
     global OFFSETS
+
+    logEvent("Read ini file")
     Config = ConfigParser.ConfigParser()
     Config.read("config.ini")
     OFFSETS[LEFT] = Config.getint('motor', 'offset_left')
@@ -61,55 +76,54 @@ def readIni():
     MIDDLE = Config.getint('motor', 'middle')
     #print("Offset Left: "+str(OFFSETS[LEFT]))
 
-def trace():
-    print("pwmL: "+str(pwmL)+", pwmR: "+str(pwmR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
-    if (DEBUG == 1):
+def initLog():
+    if(DEBUG > DBG_LVL_DISP):
+        f= open("trace.txt","w+")
+        f.write("timestamp;pwmL;pwmR;speedL;speedR;encoderL;encoderR\r\n")
+
+def logTrace():
+    if (DEBUG > DBG_LVL_OFF):
+        print("pwmL: "+str(pwmL)+", pwmR: "+str(pwmR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
+    if (DEBUG > DBG_LVL_DISP):
         f.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedL)+";"+str(speedR)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
 
-def startup():
-    global state
-    if(sys.argv[1]=="m"):
-        state = MANUAL
-    elif(sys.argv[1]=="cal"):
-        state = CALIB
-    elif(sys.argv[1] == "ctrl"):
-        state = CONTROL
-    elif(sys.argv[1]=="i"):
-        state = INIT
-    else:
-        state = IDLE
+def logEvent(event):
+    if (DEBUG > DBG_LVL_OFF):
+        print event
+    if (DEBUG >= DBG_LVL_EVENT):
+        f.write(str(time.time()) + ";" + event + "\r\n")
 
-# PI control with additional position control
-def control(speed_left, speed_right, pulses_left, pulses_right, timeout=30, positionControl=1):
-    global e_speedL_I, e_speedR_I, e_pos_I
-    pl = 0
-    pr = 0
-    sl = speed_left
-    sr = speed_right
-    Kp = 1
-    Ki = 0.5
-    Ko = 2
-    t = time.time()
-    while((time.time() - t) < timeout):
-        e_speedL = sl-speedL
-        e_speedR = sr-speedR
-        e_speedL_I += e_speedL
-        e_speedR_I += e_speedR
-        e_pos_I += encoderL - encoderR
-        if(speed_left != 0):
-            pl = Kp*e_speedL + Ki*e_speedL_I
-        else:
-            positionControl = 0
-        if(speed_right != 0):
-            pr = Kp*e_speedR + Ki*e_speedR_I + Ko*e_pos_I*positionControl
-        print("Pl: "+str(pl)+", Pr: "+str(pr))
-        run(int(pl), int(pr))
-        if( (encoderL == pulses_left) or (encoderR == pulses_right) ):
-            break
-        time.sleep(0.05)
-        speedMonitor()
-        trace()
-    freerun()
+def readCommand():
+    global state
+
+    c = raw_input("""Command (man, ctrl, cal, exit, )?: """)
+    logEvent("Command by user: " + str(c))
+    if(c == "man"):
+        state = MANUAL
+    elif(c == "ctrl"):
+        state = CONTROL
+    elif(c == "cal"):
+        state = CALIB
+    elif(c == "exit"):
+        state = EXIT
+    else:
+        state = EXIT
+
+def readEncoder():
+    global encoderL, encoderR, speedL, speedR
+    success = False
+    line = ser.readline()   #read a '\n' terminated line (timeout set in open statement)
+    data = line.split(';')
+    if(data[0] == "MOV"):
+        encoderL = int(data[1]) - leftEncoderZero
+        encoderR = int(data[2]) - rightEncoderZero
+        speedL = int(data[3])
+        speedR = int(data[4])
+        logTrace()
+        success = True
+    if(data[0] == "DBG"):
+        logEvent(line)
+    return success
 
 # Main script
 ###########################################
@@ -118,21 +132,16 @@ def control(speed_left, speed_right, pulses_left, pulses_right, timeout=30, posi
 # Initialise the PCA9685 using the default address (0x40).
 pwm = Adafruit_PCA9685.PCA9685()
 pwm.set_pwm_freq(60)
-ser = serial.Serial('/dev/ttyS0', 115200, timeout=0)
-state = IDLE
+ser = serial.Serial('/dev/ttyS0', 115200, timeout=0.1)
+state = INIT
+lastState = IDLE
 lasttime = time.time()
 encoderL = 0
 encoderR = 0
+leftEncoderZero = 0
+rightEncoderZero = 0
 directionL = STP
 directionR = STP
-lastPulseLa = 0
-lastPulseRa = 0
-lastPulseLb = 0
-lastPulseRb = 0
-speedLa = 0
-speedRa = 0
-speedLb = 0
-speedRb = 0
 speedL = 0
 speedR = 0
 pwmL = 0
@@ -142,14 +151,12 @@ calibR = 0
 e_speedL_I = 0
 e_speedR_I = 0
 e_pos_I = 0
+pl = 0 # power in PWM unit
+pr = 0 # power in PWM unit
 
-#initEncoder()
+initLog()
 readIni()
-startup()
 
-if(DEBUG == 1):
-    f= open("trace.txt","w+")
-    f.write("timestamp;pwmL;pwmR;speedLa;speedRa;encoderL;encoderR\r\n")
 #
 #### MAIN #################################
 #
@@ -157,72 +164,58 @@ try:
     while True:
         # Handle states
         if(state==INIT):
-            control(0, 2, 1, 5, 0)
-            time.sleep(1)
-            trace()
-            resetEncoder()
-            trace()
-            control(2, 0, 1, 5, 0)
-            time.sleep(1)
-            trace()
-            resetEncoder()
-            trace()
-            state = IDLE
-        if(state==IDLE):
+            readCommand()
+        elif(state==IDLE):
             #print("Idle state")
             time.sleep(0.1)
             state = EXIT
         elif(state==MANUAL):
             pl = input("power left ?")
             pr = input("power right ?")
+            duration = input("duration ?")
+            resetEncoder()
             #print "pwm L: ", pl, ", pwm R: ", pr
             run(pl, pr)
+            ser.flushInput()
             t = time.time()
-            while((time.time() - t)<2):
-                time.sleep(0.1)
-                line = ser.readline()   #read a '\n' terminated line
-                data = line.split(';')
-                if(data[0] == "MOV"):
-                    encoderL = int(data[1])
-                    encoderR = int(data[2])
-                    speedL = int(data[3])
-                    speedR = int(data[4])
-                if(data[0] == "DBG"):
-                    print line
-                trace()
+            while((time.time() - t) < int(duration)):
+                readEncoder()
             freerun()
-            #state = EXIT
+            state = IDLE
         elif(state==CONTROL):
             print("Control state")
             #control(5, 5, 30, 60)
             s  = input("speed ?")
-            pl = input("steps left ?")
-            pr = input("steps right ?")
-            control(s, s, pl, pr, 10, 1)
+            #pl = input("steps left ?")
+            #pr = input("steps right ?")
+            #control(s, s, pl, pr, 3, 0)
+            ser.flushInput()
+            t = time.time()
+            while((time.time() - t)<10):
+                if(readEncoder() == True):
+                    if(speedL < int(s)):
+                        pl = pl + 1
+                    elif(speedL > int(s)+15):
+                        pl = pl - 1
+                    if(speedR < int(s)):
+                        pr = pr + 1
+                    elif(speedR > int(s)+15):
+                        pr = pr - 1
+                    run(pl, pr)
+            freerun()
             state = EXIT
         elif(state==CALIB):
-            run(calibL, calibR)
-            print("Calib L: "+str(calibL)+", Calib R: "+str(calibR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
-            if(speedL>=5 and speedR>=5):
-                print("calibration completed.")
-                state = EXIT
-            else:
-                if(speedL>0 or speedR>0):
-                    if(speedR>speedL):
-                        calibL += 1
-                    else:
-                        calibR += 1
-                else:
-                    calibL += 1
-                    calibR += 1
-            time.sleep(0.4)
-            trace()
+            pass
         elif(state==EXIT):
             #print "State EXIT"
             #state = IDLE
             freerun()
             ser.close()
             break
+        if(state != lastState):
+            logEvent("State change to: " + str(state))
+        lastState = state
+
 # Cyclic statements
 #        time.sleep(0.1)
 
@@ -230,5 +223,6 @@ except KeyboardInterrupt:
     print "Finished"
     #GPIO.cleanup()
     freerun()
-    if (DEBUG == 1):
+    ser.close()
+    if(DEBUG > DBG_LVL_DISP):
         f.close()
