@@ -9,13 +9,6 @@ import datetime
 import subprocess
 import ConfigParser
 
-# Left encoder
-ENCODER_0A = 35
-ENCODER_0B = 37
-# Right encoder
-ENCODER_1A = 31
-ENCODER_1B = 33
-
 DEBUG = 0
 
 LEFT  = 0
@@ -34,106 +27,6 @@ CALIB= 4
 OFFSETS = [0, 0]    # overwritten by ini file settings
 MIDDLE = 400        # overwritten by ini file settings
 
-def encoder0A(channel):
-    global encoderL, directionL, lastPulseL, speedLa
-    #print('Edge L detected on channel %s'%channel)
-    a = GPIO.input(ENCODER_0A)
-    b = GPIO.input(ENCODER_0B)
-
-    if( ( (a == GPIO.HIGH) and (b == GPIO.LOW) )
-      or ( (a == GPIO.LOW) and (b == GPIO.HIGH) ) ):
-        if(directionL == RWD): # same direction as previous pulse
-            speedLa = -1/(time.time() - lastPulseL) # assuming only one pulse more
-            #print("SpeedL: " + str(speedL))
-        encoderL -= 1
-        directionL = RWD
-    else:
-        if(directionL == FWD): # same direction as previous pulse
-            speedLa = 1/(time.time() - lastPulseL) # assuming only one pulse more
-            #print("SpeedL: " + str(speedL))
-        encoderL += 1
-        directionL = FWD
-    lastPulseL = time.time()
-    #print("t: "+str(time.time())+", a: "+str(a)+", b: "+str(b)+", EncoderL: "+str(encoderL))
-    trace()
-
-def encoder0B(channel):
-    global encoderL, directionL, lastPulseL, speedLb
-    #print('Edge L detected on channel %s'%channel)
-    a = GPIO.input(ENCODER_0A)
-    b = GPIO.input(ENCODER_0B)
-
-    if( ( (a == GPIO.HIGH) and (b == GPIO.HIGH) )
-      or ( (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
-        if(directionL == RWD): # same direction as previous pulse
-            speedLb = -1/(time.time() - lastPulseL) # assuming only one pulse more
-            #print("SpeedLb: " + str(speedLb))
-        directionL = RWD
-    else:
-        if(directionL == FWD): # same direction as previous pulse
-            speedLb = 1/(time.time() - lastPulseL) # assuming only one pulse more
-            #print("SpeedLb: " + str(speedLb))
-        directionL = FWD
-    lastPulseL = time.time()
-    #print("t: "+str(time.time())+", a: "+str(a)+", b: "+str(b)+", EncoderL: "+str(encoderL))
-    trace()
-
-def encoder1A(channel):
-    global encoderR, directionR, lastPulseR, speedRa
-    #print('Edge R detected on channel %s'%channel)
-    a = GPIO.input(ENCODER_1A)
-    b = GPIO.input(ENCODER_1B)
-
-    if( ( (a == GPIO.HIGH) and (b == GPIO.HIGH) )
-      or ( (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
-        if(directionR == FWD): # same direction as previous pulse
-            speedRa = 1/(time.time() - lastPulseR) # assuming only one pulse more
-            #print("SpeedR: " + str(speedR))
-        encoderR += 1
-        directionR = FWD
-    else:
-        if(directionR == RWD): # same direction as previous pulse
-            speedRa = -1/(time.time() - lastPulseR) # assuming only one pulse more
-            #print("SpeedR: " + str(speedR))
-        encoderR -= 1
-        direction = RWD
-    lastPulseR = time.time()
-    print("t: "+str(time.time())+", a: "+str(a)+", b: "+str(b)+", EncoderR: "+str(encoderR))
-    trace()
-
-def encoder1B(channel):
-    global encoderR, directionR, lastPulseR, speedRb
-    #print('Edge R detected on channel %s'%channel)
-    a = GPIO.input(ENCODER_1A)
-    b = GPIO.input(ENCODER_1B)
-
-    if( ( (a == GPIO.HIGH) and (b == GPIO.HIGH) )
-      or ( (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
-        if(directionR == FWD): # same direction as previous pulse
-            speedRb = 1/(time.time() - lastPulseR) # assuming only one pulse more
-            #print("SpeedRb: " + str(speedRb))
-        directionR = FWD
-    else:
-        if(directionR == RWD): # same direction as previous pulse
-            speedRb = -1/(time.time() - lastPulseR) # assuming only one pulse more
-            #print("SpeedRb: " + str(speedRb))
-        direction = RWD
-    lastPulseR = time.time()
-    print("t: "+str(time.time())+", a: "+str(a)+", b: "+str(b)+", EncoderR: "+str(encoderR))
-    trace()
-
-def initEncoder():
-    GPIO.setmode(GPIO.BOARD) # Alternative: GPIO.BCM
-
-    GPIO.setup(ENCODER_0A, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.setup(ENCODER_0B, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.setup(ENCODER_1A, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-    GPIO.setup(ENCODER_1B, GPIO.IN, pull_up_down=GPIO.PUD_UP)
-
-    GPIO.add_event_detect(ENCODER_0A, GPIO.BOTH, encoder0A)
-    GPIO.add_event_detect(ENCODER_0B, GPIO.BOTH, encoder0B)
-    GPIO.add_event_detect(ENCODER_1A, GPIO.BOTH, encoder1A)
-    GPIO.add_event_detect(ENCODER_1B, GPIO.BOTH, encoder1B)
 
 # max +/- 205
 def run(l, r):
@@ -158,7 +51,7 @@ def readIni():
     #print("Offset Left: "+str(OFFSETS[LEFT]))
 
 def trace():
-    #print("pwmL: "+str(calibL)+", pwmR: "+str(calibR)+", SpeedLa: "+str(speedLa)+", SpeedRa: "+str(speedRa)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
+    print("pwmL: "+str(calibL)+", pwmR: "+str(calibR)+", SpeedLa: "+str(speedLa)+", SpeedRa: "+str(speedRa)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
     if (DEBUG == 1):
         f.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedLa)+";"+str(speedRa)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
 
@@ -187,8 +80,8 @@ pwmR = 0
 calibL = 0
 calibR = 0
 
-initEncoder()
 readIni()
+
 if(DEBUG == 1):
     f= open("trace.txt","w+")
     f.write("timestamp;pwmL;pwmR;speedLa;speedRa;encoderL;encoderR\r\n")
