@@ -35,7 +35,7 @@ OFFSETS = [0, 0]    # overwritten by ini file settings
 MIDDLE = 400        # overwritten by ini file settings
 
 def encoder0A(channel):
-    global encoderL, directionL, lastPulseL, speedL
+    global encoderL, directionL, lastPulseL, speedLa
     #print('Edge L detected on channel %s'%channel)
     a = GPIO.input(ENCODER_0A)
     b = GPIO.input(ENCODER_0B)
@@ -43,13 +43,13 @@ def encoder0A(channel):
     if( ( (a == GPIO.HIGH) and (b == GPIO.LOW) )
       or ( (a == GPIO.LOW) and (b == GPIO.HIGH) ) ):
         if(directionL == RWD): # same direction as previous pulse
-            speedL = -1/(time.time() - lastPulseL) # assuming only one pulse more
+            speedLa = -1/(time.time() - lastPulseL) # assuming only one pulse more
             #print("SpeedL: " + str(speedL))
         encoderL -= 1
         directionL = RWD
     else:
         if(directionL == FWD): # same direction as previous pulse
-            speedL = 1/(time.time() - lastPulseL) # assuming only one pulse more
+            speedLa = 1/(time.time() - lastPulseL) # assuming only one pulse more
             #print("SpeedL: " + str(speedL))
         encoderL += 1
         directionL = FWD
@@ -58,48 +58,42 @@ def encoder0A(channel):
     trace()
 
 def encoder0B(channel):
-    global encoderL, directionL, lastPulseL, speedL
+    global encoderL, directionL, lastPulseL, speedLb
     #print('Edge L detected on channel %s'%channel)
     a = GPIO.input(ENCODER_0A)
     b = GPIO.input(ENCODER_0B)
 
-    if( ( (channel == ENCODER_0A) and (a == GPIO.HIGH) and (b == GPIO.LOW) )
-      or ( (channel == ENCODER_0A) and (a == GPIO.LOW) and (b == GPIO.HIGH) )
-      or ( (channel == ENCODER_0B) and (a == GPIO.HIGH) and (b == GPIO.HIGH) )
-      or ( (channel == ENCODER_0B) and (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
+    if( ( (a == GPIO.HIGH) and (b == GPIO.HIGH) )
+      or ( (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
         if(directionL == RWD): # same direction as previous pulse
-            speedL = -1/(time.time() - lastPulseL) # assuming only one pulse more
-            #print("SpeedL: " + str(speedL))
-        encoderL -= 1
+            speedLb = -1/(time.time() - lastPulseL) # assuming only one pulse more
+            #print("SpeedLb: " + str(speedLb))
         directionL = RWD
     else:
         if(directionL == FWD): # same direction as previous pulse
-            speedL = 1/(time.time() - lastPulseL) # assuming only one pulse more
-            #print("SpeedL: " + str(speedL))
-        encoderL += 1
+            speedLb = 1/(time.time() - lastPulseL) # assuming only one pulse more
+            #print("SpeedLb: " + str(speedLb))
         directionL = FWD
     lastPulseL = time.time()
     #print("t: "+str(time.time())+", a: "+str(a)+", b: "+str(b)+", EncoderL: "+str(encoderL))
     trace()
 
 def encoder1A(channel):
-    global encoderR, directionR, lastPulseR, speedR
+    global encoderR, directionR, lastPulseR, speedRa
     #print('Edge R detected on channel %s'%channel)
     a = GPIO.input(ENCODER_1A)
     b = GPIO.input(ENCODER_1B)
 
-    if( ( (channel == ENCODER_1A) and (a == GPIO.HIGH) and (b == GPIO.LOW) )
-      or ( (channel == ENCODER_1A) and (a == GPIO.LOW) and (b == GPIO.HIGH) )
-      or ( (channel == ENCODER_1B) and (a == GPIO.HIGH) and (b == GPIO.HIGH) )
-      or ( (channel == ENCODER_1B) and (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
+    if( ( (a == GPIO.HIGH) and (b == GPIO.HIGH) )
+      or ( (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
         if(directionR == FWD): # same direction as previous pulse
-            speedR = 1/(time.time() - lastPulseR) # assuming only one pulse more
+            speedRa = 1/(time.time() - lastPulseR) # assuming only one pulse more
             #print("SpeedR: " + str(speedR))
         encoderR += 1
         directionR = FWD
     else:
         if(directionR == RWD): # same direction as previous pulse
-            speedR = -1/(time.time() - lastPulseR) # assuming only one pulse more
+            speedRa = -1/(time.time() - lastPulseR) # assuming only one pulse more
             #print("SpeedR: " + str(speedR))
         encoderR -= 1
         direction = RWD
@@ -108,25 +102,21 @@ def encoder1A(channel):
     trace()
 
 def encoder1B(channel):
-    global encoderR, directionR, lastPulseR, speedR
+    global encoderR, directionR, lastPulseR, speedRb
     #print('Edge R detected on channel %s'%channel)
     a = GPIO.input(ENCODER_1A)
     b = GPIO.input(ENCODER_1B)
 
-    if( ( (channel == ENCODER_1A) and (a == GPIO.HIGH) and (b == GPIO.LOW) )
-      or ( (channel == ENCODER_1A) and (a == GPIO.LOW) and (b == GPIO.HIGH) )
-      or ( (channel == ENCODER_1B) and (a == GPIO.HIGH) and (b == GPIO.HIGH) )
-      or ( (channel == ENCODER_1B) and (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
+    if( ( (a == GPIO.HIGH) and (b == GPIO.HIGH) )
+      or ( (a == GPIO.LOW) and (b == GPIO.LOW) ) ):
         if(directionR == FWD): # same direction as previous pulse
-            speedR = 1/(time.time() - lastPulseR) # assuming only one pulse more
-            #print("SpeedR: " + str(speedR))
-        encoderR += 1
+            speedRb = 1/(time.time() - lastPulseR) # assuming only one pulse more
+            #print("SpeedRb: " + str(speedRb))
         directionR = FWD
     else:
         if(directionR == RWD): # same direction as previous pulse
-            speedR = -1/(time.time() - lastPulseR) # assuming only one pulse more
-            #print("SpeedR: " + str(speedR))
-        encoderR -= 1
+            speedRb = -1/(time.time() - lastPulseR) # assuming only one pulse more
+            #print("SpeedRb: " + str(speedRb))
         direction = RWD
     lastPulseR = time.time()
     print("t: "+str(time.time())+", a: "+str(a)+", b: "+str(b)+", EncoderR: "+str(encoderR))
@@ -168,9 +158,9 @@ def readIni():
     #print("Offset Left: "+str(OFFSETS[LEFT]))
 
 def trace():
-    #print("pwmL: "+str(calibL)+", pwmR: "+str(calibR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
+    #print("pwmL: "+str(calibL)+", pwmR: "+str(calibR)+", SpeedLa: "+str(speedLa)+", SpeedRa: "+str(speedRa)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
     if (DEBUG == 1):
-        f.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedL)+";"+str(speedR)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
+        f.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedLa)+";"+str(speedRa)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
 
 
 # Main script
@@ -188,8 +178,10 @@ directionL = STP
 directionR = STP
 lastPulseL = 0
 lastPulseR = 0
-speedL = 0
-speedR = 0
+speedLa = 0
+speedRa = 0
+speedLb = 0
+speedRb = 0
 pwmL = 0
 pwmR = 0
 calibL = 0
@@ -199,7 +191,7 @@ initEncoder()
 readIni()
 if(DEBUG == 1):
     f= open("trace.txt","w+")
-    f.write("timestamp;pwmL;pwmR;speedL;speedR;encoderL;encoderR\r\n")
+    f.write("timestamp;pwmL;pwmR;speedLa;speedRa;encoderL;encoderR\r\n")
 #
 #### MAIN #################################
 #
@@ -219,13 +211,13 @@ try:
             #state = EXIT
         elif(state==CALIB):
             run(calibL, calibR)
-            #print("Calib L: "+str(calibL)+", Calib R: "+str(calibR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
-            if(speedL>=15 and speedR>=15):
+            #print("Calib L: "+str(calibL)+", Calib R: "+str(calibR)+", SpeedLa: "+str(speedLa)+", SpeedRa: "+str(speedRa)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
+            if(speedLa>=15 and speedRa>=15):
                 print("calibration completed.")
                 state = EXIT
             else:
-                if(speedL>0 or speedR>0):
-                    if(speedR>speedL):
+                if(speedLa>0 or speedRa>0):
+                    if(speedRa>speedLa):
                         calibL += 1
                     else:
                         calibR += 1
@@ -244,10 +236,10 @@ try:
         time.sleep(0.1)
         if(time.time() - lastPulseL)>1:
             #print("speedL: 0")
-            speedL = 0
+            speedLa = 0
         if(time.time() - lastPulseR)>1:
             #print("speedR: 0")
-            speedR = 0
+            speedRa = 0
 
 except KeyboardInterrupt:
     print "Finished"
