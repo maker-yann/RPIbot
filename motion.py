@@ -28,8 +28,8 @@ LEFT  = 0
 RIGHT = 1
 
 STP = 0
-RWD = 1
-FWD = 2
+RWD = -1
+FWD = 1
 
 IDLE    = 0
 MOVE    = 1
@@ -58,14 +58,17 @@ def freerun():
     pwm.set_pwm(RIGHT, 0, 0)
 
 def resetEncoder():
-    #global encoderR, encoderL
-    global leftEncoderZero, rightEncoderZero
+    global leftEncoderZero, rightEncoderZero, encoderL, encoderR
 
     logEvent(LVL_INFORMATION, "Reset encoder")
-    #encoderL = 0
-    #encoderR = 0
+    while(not readEncoder()):
+        pass
     leftEncoderZero += encoderL
     rightEncoderZero += encoderR
+    #encoderL = 0
+    #encoderR = 0
+    while(not readEncoder()):
+        pass
 
 def readIni():
     global OFFSETS
@@ -136,25 +139,41 @@ def readEncoder():
     return success
 
 def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTarget, timeout):
+    global directionL, directionR
     ser.flushInput()
     t = time.time()
-    pl = 0
-    pr = 0
+    if(leftSpeedTarget > 0):
+        directionL = FWD
+    elif(leftSpeedTarget < 0):
+        directionL = RWD
+    else:
+        directionL = STP
+    if(rightSpeedTarget > 0):
+        directionR = FWD
+    elif(rightSpeedTarget < 0):
+        directionR = RWD
+    else:
+        directionR = STP
+    pl = 10*directionL
+    pr = 10*directionR
+
     while((time.time() - t) < timeout):
         if(readEncoder() == True):
-            if(speedL < int(leftSpeedTarget)):
+            if(directionL*speedL < int(leftSpeedTarget)):
                 pl = pl + 1
-            elif(speedL > int(leftSpeedTarget)+15):
+            elif(directionL*speedL > int(leftSpeedTarget)+15):
                 pl = pl - 1
-            if(speedR < int(rightSpeedTarget)):
+            if(directionR*speedR < int(rightSpeedTarget)):
                 pr = pr + 1
-            elif(speedR > int(rightSpeedTarget)+15):
+            elif(directionR*speedR > int(rightSpeedTarget)+15):
                 pr = pr - 1
-            if(encoderL==leftEncoderTarget):
+            if(encoderL >= leftEncoderTarget) :
                 pl = 0
-            if(encoderR==rightEncoderTarget):
+            if(encoderR >= rightEncoderTarget):
                 pr = 0
             run(pl, pr)
+            if((encoderL >= leftEncoderTarget) and (encoderR >= rightEncoderTarget)):
+                break
     run(0, 0)
 
 # Main script
@@ -202,7 +221,7 @@ try:
             logEvent(LVL_INFORMATION, "Idle state")
             ser.flushInput()
             t = time.time()
-            while((time.time() - t) < 5):
+            while((time.time() - t) < 2):
                 readEncoder()
             resetEncoder()
             state = INIT
@@ -222,11 +241,13 @@ try:
             state = INIT
         elif(state==CONTROL):
             logEvent(LVL_INFORMATION, "Starting Control mode")
-            s  = input("speed ?")
+            sl  = input("speed left ?")
+            sr  = input("speed right ?")
             pl = input("steps left ?")
             pr = input("steps right ?")
+            t = input("timeout ?")
             resetEncoder()
-            control(s, s, pl, pr, 5)
+            control(sl, sr, pl, pr, int(t))
             state = INIT
         elif(state==CALIB):
             logEvent(LVL_INFORMATION, "Starting calibration mode")
