@@ -17,9 +17,10 @@ LVL_ERROR           = 50
 LVL_WARNING         = 40
 LVL_INFORMATION     = 30
 LVL_DEBUGGING       = 20
-LVL_ALL             = 10
+LVL_DEBUG_DEEP      = 10
+LVL_ALL             = 0
 
-DEBUG = LVL_INFORMATION
+DEBUG = LVL_DEBUGGING
 
 TRACE       = 0
 
@@ -113,6 +114,8 @@ def readCommand():
         state = CALIB
     elif(c == "exit"):
         state = EXIT
+    elif(c == "idle"):
+        state = IDLE
     else:
         state = EXIT
 
@@ -129,8 +132,30 @@ def readEncoder():
         writeTrace()
         success = True
     if(data[0] == "DBG"):
-        logEvent(LVL_DEBUGGING, line)
+        logEvent(LVL_DEBUG_DEEP, line)
     return success
+
+def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTarget, timeout):
+    ser.flushInput()
+    t = time.time()
+    pl = 0
+    pr = 0
+    while((time.time() - t) < timeout):
+        if(readEncoder() == True):
+            if(speedL < int(leftSpeedTarget)):
+                pl = pl + 1
+            elif(speedL > int(leftSpeedTarget)+15):
+                pl = pl - 1
+            if(speedR < int(rightSpeedTarget)):
+                pr = pr + 1
+            elif(speedR > int(rightSpeedTarget)+15):
+                pr = pr - 1
+            if(encoderL==leftEncoderTarget):
+                pl = 0
+            if(encoderR==rightEncoderTarget):
+                pr = 0
+            run(pl, pr)
+    run(0, 0)
 
 # Main script
 ###########################################
@@ -174,9 +199,13 @@ try:
         if(state==INIT):
             readCommand()
         elif(state==IDLE):
-            #print("Idle state")
-            time.sleep(0.1)
-            state = EXIT
+            logEvent(LVL_INFORMATION, "Idle state")
+            ser.flushInput()
+            t = time.time()
+            while((time.time() - t) < 5):
+                readEncoder()
+            resetEncoder()
+            state = INIT
         elif(state==MANUAL):
             logEvent(LVL_INFORMATION, "Starting manual mode")
             pl = input("power left ?")
@@ -190,28 +219,15 @@ try:
             while((time.time() - t) < int(duration)):
                 readEncoder()
             freerun()
-            state = IDLE
+            state = INIT
         elif(state==CONTROL):
             logEvent(LVL_INFORMATION, "Starting Control mode")
-            #control(5, 5, 30, 60)
             s  = input("speed ?")
-            #pl = input("steps left ?")
-            #pr = input("steps right ?")
-            #control(s, s, pl, pr, 3, 0)
-            ser.flushInput()
-            t = time.time()
-            while((time.time() - t)<10):
-                if(readEncoder() == True):
-                    if(speedL < int(s)):
-                        pl = pl + 1
-                    elif(speedL > int(s)+15):
-                        pl = pl - 1
-                    if(speedR < int(s)):
-                        pr = pr + 1
-                    elif(speedR > int(s)+15):
-                        pr = pr - 1
-                    run(pl, pr)
-            state = EXIT
+            pl = input("steps left ?")
+            pr = input("steps right ?")
+            resetEncoder()
+            control(s, s, pl, pr, 5)
+            state = INIT
         elif(state==CALIB):
             logEvent(LVL_INFORMATION, "Starting calibration mode")
             ser.flushInput()
@@ -236,6 +252,10 @@ try:
             #state = IDLE
             freerun()
             ser.close()
+            if(DEBUG < LVL_NONE):
+                logfile.close()
+            if(TRACE == 1):
+                tracefile.close()
             break
         if(state != lastState):
             logEvent(LVL_INFORMATION, "State change to: " + str(state))
@@ -245,7 +265,7 @@ try:
 #        time.sleep(0.1)
 
 except KeyboardInterrupt:
-    print "Finished"
+    logEvent(LVL_WARNING,"Exit by KeyboardInterrupt")
     #GPIO.cleanup()
     freerun()
     ser.close()
