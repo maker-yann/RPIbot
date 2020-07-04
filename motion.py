@@ -20,7 +20,8 @@ LVL_DEBUGGING       = 20
 LVL_DEBUG_DEEP      = 10
 LVL_ALL             = 0
 
-DEBUG = LVL_INFORMATION
+#DEBUG = LVL_INFORMATION
+DEBUG = LVL_DEBUGGING
 
 TRACE = 0
 
@@ -52,7 +53,7 @@ def run(l, r):
     pwmR = MIDDLE - OFFSETS[RIGHT] - r
     pwm.set_pwm(LEFT, 0, pwmL)
     pwm.set_pwm(RIGHT, 0, pwmR)
-    #print("PWMs: "+str(pwmL)+", "+str(pwmR))
+    logEvent(LVL_DEBUGGING, "RUN: PWMs= "+str(pwmL)+", "+str(pwmR))
 
 def freerun():
     pwm.set_pwm(LEFT, 0, 0)
@@ -94,19 +95,19 @@ def initTrace():
 
 def writeTrace():
     if (DEBUG <= LVL_DEBUGGING):
-        print("pwmL: "+str(pwmL)+", pwmR: "+str(pwmR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR))
+        logfile.write("pwmL: "+str(pwmL)+", pwmR: "+str(pwmR)+", SpeedL: "+str(speedL)+", SpeedR: "+str(speedR)+", encoderL: "+str(encoderL)+", encoderR: "+str(encoderR)+"\r\n")
     if (TRACE == 1):
         tracefile.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedL)+";"+str(speedR)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
 
 def logEvent(level, event):
-    if (level >= LVL_INFORMATION):
+    if (level >= DEBUG):
         print event
         logfile.write(str(time.time()) + ";" + event + "\r\n")
 
 def readCommand():
     global state
 
-    c = raw_input("""Command (man, ctrl, cal, exit, )?: """)
+    c = raw_input("""Command (man, ctrl, cal, exit, idle)?: """)
     logEvent(LVL_INFORMATION, "Command by user: " + str(c))
     if(c == "man"):
         state = MANUAL
@@ -138,7 +139,9 @@ def readEncoder():
     return success
 
 def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTarget, timeout):
-    global directionL, directionR
+    global directionL, directionR, pl, pr
+
+    logEvent(LVL_INFORMATION, "Calling control with left speed = "+str(leftSpeedTarget)+", right speed = "+str(rightSpeedTarget)+", left encoder = "+str(leftEncoderTarget)+", right encoder = "+str(rightEncoderTarget))
     ser.flushInput()
     t = time.time()
     if(leftSpeedTarget > 0):
@@ -155,6 +158,7 @@ def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTa
         directionR = STP
     pl = 10*directionL
     pr = 10*directionR
+    yawCorrection = 0
 
     while((time.time() - t) < timeout):
         if(readEncoder() == True):
@@ -166,11 +170,21 @@ def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTa
                 pr = pr + 1
             elif(directionR*speedR > int(rightSpeedTarget)+15):
                 pr = pr - 1
+            #if( (leftEncoderTarget == rightEncoderTarget) and (directionL*directionR>0)):
+            if(leftEncoderTarget == rightEncoderTarget):
+                if(encoderL > encoderR):
+                    yawCorrection += 1
+                elif(encoderL < encoderR):
+                    yawCorrection -= 1
+                logEvent(LVL_DEBUGGING, "yawCorrection: "+str(yawCorrection))
             if(encoderL >= leftEncoderTarget) :
                 pl = 0
+                yawCorrection = 0
             if(encoderR >= rightEncoderTarget):
                 pr = 0
-            run(pl, pr)
+                yawCorrection = 0
+            logEvent(LVL_DEBUGGING, "pl: "+str(pl)+", pr: "+str(pr)+", yaw: "+str(yawCorrection))
+            run(pl - yawCorrection, pr + yawCorrection)
             if((encoderL >= leftEncoderTarget) and (encoderR >= rightEncoderTarget)):
                 break
     run(0, 0)
@@ -246,7 +260,7 @@ try:
             pr = input("steps right ?")
             t = input("timeout ?")
             resetEncoder()
-            control(sl, sr, pl, pr, int(t))
+            control(int(sl), int(sr), int(pl), int(pr), int(t))
             state = INIT
         elif(state==CALIB):
             logEvent(LVL_INFORMATION, "Starting calibration mode")
