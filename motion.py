@@ -20,9 +20,9 @@ LVL_DEBUGGING       = 20
 LVL_DEBUG_DEEP      = 10
 LVL_ALL             = 0
 
-DEBUG = LVL_DEBUGGING
+DEBUG = LVL_INFORMATION
 
-TRACE       = 0
+TRACE = 0
 
 LEFT  = 0
 RIGHT = 1
@@ -45,6 +45,7 @@ MIDDLE = 400        # overwritten by ini file settings
 
 # low level abstraction
 # l, r: PWMs (direction, middle point and offset are corrected here)
+# commands can be positive or negative here
 def run(l, r):
     global pwmL, pwmR
     pwmL = MIDDLE + OFFSETS[LEFT] + l
@@ -65,8 +66,6 @@ def resetEncoder():
         pass
     leftEncoderZero += encoderL
     rightEncoderZero += encoderR
-    #encoderL = 0
-    #encoderR = 0
     while(not readEncoder()):
         pass
 
@@ -269,8 +268,7 @@ try:
                 logEvent(LVL_INFORMATION, "CAL: Left [PWM="+str(i)+"; speed="+str(meanSpeedLeft)+"], Right [PWM="+str(i)+"; speed="+str(meanSpeedRight)+"]")
             state = EXIT
         elif(state==EXIT):
-            #print "State EXIT"
-            #state = IDLE
+            logEvent(LVL_INFORMATION, "Exiting session")
             freerun()
             ser.close()
             if(DEBUG < LVL_NONE):
@@ -282,8 +280,6 @@ try:
             logEvent(LVL_INFORMATION, "State change to: " + str(state))
         lastState = state
 
-# Cyclic statements
-#        time.sleep(0.1)
 
 except KeyboardInterrupt:
     logEvent(LVL_WARNING,"Exit by KeyboardInterrupt")
