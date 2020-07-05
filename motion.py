@@ -53,7 +53,7 @@ def run(l, r):
     pwmR = MIDDLE - OFFSETS[RIGHT] - r
     pwm.set_pwm(LEFT, 0, pwmL)
     pwm.set_pwm(RIGHT, 0, pwmR)
-    logEvent(LVL_DEBUGGING, "RUN: PWMs= "+str(pwmL)+", "+str(pwmR))
+    logEvent(LVL_DEBUGGING, "RUN: PWMs= "+str(pwmL)+", "+str(pwmR)+"; pl: "+str(l)+", pr: "+str(r))
 
 def freerun():
     pwm.set_pwm(LEFT, 0, 0)
@@ -139,7 +139,7 @@ def readEncoder():
     return success
 
 def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTarget, timeout):
-    global directionL, directionR, pl, pr
+    global directionL, directionR
 
     logEvent(LVL_INFORMATION, "Calling control with left speed = "+str(leftSpeedTarget)+", right speed = "+str(rightSpeedTarget)+", left encoder = "+str(leftEncoderTarget)+", right encoder = "+str(rightEncoderTarget))
     ser.flushInput()
@@ -184,7 +184,7 @@ def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTa
                 pr = 0
                 yawCorrection = 0
             logEvent(LVL_DEBUGGING, "pl: "+str(pl)+", pr: "+str(pr)+", yaw: "+str(yawCorrection))
-            run(pl - yawCorrection, pr + yawCorrection)
+            run(pl - yawCorrection, pr - yawCorrection)
             if((encoderL >= leftEncoderTarget) and (encoderR >= rightEncoderTarget)):
                 break
     run(0, 0)
@@ -215,8 +215,6 @@ calibR = 0
 e_speedL_I = 0
 e_speedR_I = 0
 e_pos_I = 0
-pl = 0 # power in PWM unit
-pr = 0 # power in PWM unit
 
 initLog()
 logEvent(LVL_INFORMATION, "Starting session")
@@ -256,11 +254,11 @@ try:
             logEvent(LVL_INFORMATION, "Starting Control mode")
             sl  = input("speed left ?")
             sr  = input("speed right ?")
-            pl = input("steps left ?")
-            pr = input("steps right ?")
+            el = input("steps left ?")
+            er = input("steps right ?")
             t = input("timeout ?")
             resetEncoder()
-            control(int(sl), int(sr), int(pl), int(pr), int(t))
+            control(int(sl), int(sr), int(el), int(er), int(t))
             state = INIT
         elif(state==CALIB):
             logEvent(LVL_INFORMATION, "Starting calibration mode")
