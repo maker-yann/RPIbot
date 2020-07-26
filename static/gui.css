@@ -1,0 +1,187 @@
+
+body {
+  background: white;
+  margin: 10px;
+}
+
+body,
+input {
+  font-family: sans-serif;
+  font-size: 10pt;
+  color: black;
+}
+
+input[type=text] {
+  box-sizing: border-box;
+}
+
+table {
+  border-collapse: collapse;
+  border: 0;
+}
+
+td {
+  border: 0;
+  padding: 0;
+}
+
+label {
+    display: block;
+    /*font: 1rem 'Fira Sans', sans-serif;*/
+}
+
+/* Class relevant */
+
+.slidecontainer {
+  position: absolute;
+  width: 150px; /* Width of the outside container */
+  height: auto;
+  left: 450px;
+  top: 260px;
+}
+
+.controls {
+  position: absolute;
+  /*width: 350px;
+  height: auto;*/
+  left: 625px;
+  top: 260px;
+}
+
+/* The slider itself */
+.slider {
+  -webkit-appearance: none;  /* Override default CSS styles */
+  appearance: none;
+  width: 100%; /* Full-width */
+  height: 15px; /* Specified height */
+  background: #d3d3d3; /* Grey background */
+  outline: none; /* Remove outline */
+  opacity: 0.7; /* Set transparency (for mouse-over effects on hover) */
+  -webkit-transition: .2s; /* 0.2 seconds transition on hover */
+  transition: opacity .2s;
+}
+
+/* Mouse-over effects */
+.slider:hover {
+  opacity: 1; /* Fully shown on mouse-over */
+}
+
+/* The slider handle (use -webkit- (Chrome, Opera, Safari, Edge) and -moz- (Firefox) to override default look) */
+.slider::-webkit-slider-thumb {
+  -webkit-appearance: none; /* Override default look */
+  appearance: none;
+  width: 15px; /* Set a specific slider handle width */
+  height: 15px; /* Slider handle height */
+  background: #4CAF50; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+.slider::-moz-range-thumb {
+  width: 15px; /* Set a specific slider handle width */
+  height: 15px; /* Slider handle height */
+  background: #4CAF50; /* Green background */
+  cursor: pointer; /* Cursor on hover */
+}
+
+#body {
+  position: absolute;
+  bottom: 10px;
+  left: 10px;
+}
+
+#input {
+  margin-top: 0.5em;
+}
+
+#inbox .message {
+  padding-top: 0.25em;
+}
+
+#nav {
+  float: right;
+  z-index: 99;
+}
+
+#input_output {
+    position: absolute;
+    height: auto;
+    width: 200px;
+    left: 9px;
+    bottom: 20px;
+}
+
+#sse {
+    position: absolute;
+    height: auto;
+    left: 9px;
+    top: 9px;
+}
+
+#robot {
+    position: absolute;
+    top: 10px;
+}
+
+#cam {
+    position: absolute;
+    height: auto;
+    left: 10px;
+    top: 50px;
+}
+
+#leftWheel {
+    position: absolute;
+    left: 0px;
+    top: 150px;
+}
+
+#rightWheel {
+    position: absolute;
+    left: 290px;
+    top: 150px;
+}
+
+#distance {
+    position: absolute;
+    left: 150px;
+    top: 10px;
+}
+
+#rawL {
+    position: absolute;
+    left: 100px;
+    top: 140px;
+}
+
+#rawR {
+    position: absolute;
+    left: 200px;
+    top: 140px;
+}
+
+#robot_view {
+    position: absolute;
+    height: 400px;
+    width: 500px;
+    left: 450px;
+    top: 10px;
+}
+
+#pan {
+  position: absolute;
+  direction: rtl;
+  width: 390px; /* Width of the outside container */
+  height: 200px;
+  left: 0px;
+  top: 220px;
+}
+
+#tilt {
+  transform: rotate(270deg);
+  position: absolute;
+  width: 290px; /* Width of the outside container */
+  height: 50px;
+  left: 270px;
+  top: 125px;
+}
+

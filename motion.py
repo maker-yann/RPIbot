@@ -20,17 +20,20 @@ LVL_DEBUGGING       = 20
 LVL_DEBUG_DEEP      = 10
 LVL_ALL             = 0
 
-#DEBUG = LVL_INFORMATION
-DEBUG = LVL_DEBUGGING
+DEBUG = LVL_INFORMATION
+#DEBUG = LVL_DEBUGGING
 
 TRACE = 0
 
 LEFT  = 0
 RIGHT = 1
+PAN   = 2
+TILT  = 3
 
-STP = 0
-RWD = -1
-FWD = 1
+TURN =  0
+STP  =  0
+RWD  = -1
+FWD  =  1
 
 IDLE    = 0
 MOVE    = 1
@@ -40,9 +43,13 @@ CALIB   = 4
 MANUAL  = 5
 CONTROL = 6
 INIT    = 7
+HEAD    = 8
+TEST    = 9
+DRIVE   = 10
 
-OFFSETS = [0, 0]    # overwritten by ini file settings
+OFFSETS = [0, 0, 0, 0]    # overwritten by ini file settings
 MIDDLE = 400        # overwritten by ini file settings
+STOP_DISTANCE = 50
 
 # low level abstraction
 # l, r: PWMs (direction, middle point and offset are corrected here)
@@ -55,9 +62,16 @@ def run(l, r):
     pwm.set_pwm(RIGHT, 0, pwmR)
     logEvent(LVL_DEBUGGING, "RUN: PWMs= "+str(pwmL)+", "+str(pwmR)+"; pl: "+str(l)+", pr: "+str(r))
 
+def head(pan, tilt):
+    pwm.set_pwm(PAN, 0, MIDDLE + OFFSETS[PAN] + pan)
+    pwm.set_pwm(TILT, 0, MIDDLE + OFFSETS[TILT] + tilt)
+    logEvent(LVL_DEBUGGING, "LOOK: Pan= "+str(pan)+" Tilt: "+str(tilt))
+
 def freerun():
     pwm.set_pwm(LEFT, 0, 0)
     pwm.set_pwm(RIGHT, 0, 0)
+    pwm.set_pwm(PAN, 0, 0)
+    pwm.set_pwm(TILT, 0, 0)
 
 def resetEncoder():
     global leftEncoderZero, rightEncoderZero, encoderL, encoderR
@@ -78,6 +92,8 @@ def readIni():
     Config.read("config.ini")
     OFFSETS[LEFT] = Config.getint('motor', 'offset_left')
     OFFSETS[RIGHT] = Config.getint('motor', 'offset_right')
+    OFFSETS[PAN] = Config.getint('motor', 'offset_pan')
+    OFFSETS[TILT] = Config.getint('motor', 'offset_tilt')
     MIDDLE = Config.getint('motor', 'middle')
     #print("Offset Left: "+str(OFFSETS[LEFT]))
 
@@ -100,6 +116,7 @@ def writeTrace():
         tracefile.write(str(time.time())+";"+str(pwmL)+";"+str(pwmR)+";"+str(speedL)+";"+str(speedR)+";"+str(encoderL)+";"+str(encoderR)+"\r\n")
 
 def logEvent(level, event):
+    event = event.strip()
     if (level >= DEBUG):
         print event
         logfile.write(str(time.time()) + ";" + event + "\r\n")
@@ -107,35 +124,48 @@ def logEvent(level, event):
 def readCommand():
     global state
 
-    c = raw_input("""Command (man, ctrl, cal, exit, idle)?: """)
+    c = raw_input("""Command (man, ctrl, cal, exit, idle, head, test, drive)?: """)
     logEvent(LVL_INFORMATION, "Command by user: " + str(c))
     if(c == "man"):
         state = MANUAL
     elif(c == "ctrl"):
         state = CONTROL
+    elif(c == "drive"):
+        state = DRIVE
     elif(c == "cal"):
         state = CALIB
     elif(c == "exit"):
         state = EXIT
     elif(c == "idle"):
         state = IDLE
+    elif(c == "head"):
+        state = HEAD
+    elif(c == "test"):
+        state = TEST
     else:
         state = EXIT
 
 def readEncoder():
-    global encoderL, encoderR, speedL, speedR
+    global encoderL, encoderR, speedL, speedR, distance, raw_encoder_L, raw_encoder_R
     success = False
-    line = ser.readline()   #read a '\n' terminated line (timeout set in open statement)
-    data = line.split(';')
-    if(data[0] == "MOV"):
-        encoderL = int(data[1]) - leftEncoderZero
-        encoderR = int(data[2]) - rightEncoderZero
-        speedL = int(data[3])
-        speedR = int(data[4])
-        writeTrace()
-        success = True
-    if(data[0] == "DBG"):
-        logEvent(LVL_DEBUG_DEEP, line)
+    while(ser.in_waiting > 0):
+        line = ser.readline()   #read a '\n' terminated line (timeout set in open statement)
+        data = line.split(';')
+        if(data[0] == "MOV"):
+            encoderL = int(data[1]) - leftEncoderZero
+            encoderR = int(data[2]) - rightEncoderZero
+            speedL = int(data[3])
+            speedR = int(data[4])
+            logEvent(LVL_INFORMATION, "MOV: "+line)
+            writeTrace()
+            success = True
+        if(data[0] == "DBG"):
+            logEvent(LVL_DEBUGGING, "DBG: "+line)
+            raw_encoder_L = int(data[1])
+            raw_encoder_R = int(data[2])
+        if(data[0] == "DST"):
+            distance = int(data[1])
+            logEvent(LVL_INFORMATION, "DST: "+str(distance))
     return success
 
 def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTarget, timeout):
@@ -176,7 +206,9 @@ def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTa
                     yawCorrection += 1
                 elif(encoderL < encoderR):
                     yawCorrection -= 1
-                logEvent(LVL_DEBUGGING, "yawCorrection: "+str(yawCorrection))
+                #else:
+                    #yawCorrection = 0
+                #logEvent(LVL_DEBUGGING, "yawCorrection: "+str(yawCorrection))
             if(encoderL >= leftEncoderTarget) :
                 pl = 0
                 yawCorrection = 0
@@ -184,8 +216,11 @@ def control(leftSpeedTarget, rightSpeedTarget, leftEncoderTarget, rightEncoderTa
                 pr = 0
                 yawCorrection = 0
             logEvent(LVL_DEBUGGING, "pl: "+str(pl)+", pr: "+str(pr)+", yaw: "+str(yawCorrection))
-            run(pl - yawCorrection, pr - yawCorrection)
+            run(pl - yawCorrection, pr + yawCorrection)
             if((encoderL >= leftEncoderTarget) and (encoderR >= rightEncoderTarget)):
+                break
+            if( (directionL == FWD) and (directionR == FWD) and (distance < STOP_DISTANCE) ):
+                logEvent(LVL_INFORMATION, "Stopped at : "+str(distance))
                 break
     run(0, 0)
 
@@ -202,6 +237,8 @@ lastState = IDLE
 lasttime = time.time()
 encoderL = 0
 encoderR = 0
+raw_encoder_L = 0
+raw_encoder_R = 0
 leftEncoderZero = 0
 rightEncoderZero = 0
 directionL = STP
@@ -215,10 +252,12 @@ calibR = 0
 e_speedL_I = 0
 e_speedR_I = 0
 e_pos_I = 0
+distance = 0
 
 initLog()
 logEvent(LVL_INFORMATION, "Starting session")
 readIni()
+head(0, 0)
 
 #
 #### MAIN #################################
@@ -232,9 +271,9 @@ try:
             logEvent(LVL_INFORMATION, "Idle state")
             ser.flushInput()
             t = time.time()
-            while((time.time() - t) < 2):
+            while((time.time() - t) < 5):
                 readEncoder()
-            resetEncoder()
+            #resetEncoder()
             state = INIT
         elif(state==MANUAL):
             logEvent(LVL_INFORMATION, "Starting manual mode")
@@ -250,6 +289,35 @@ try:
                 readEncoder()
             freerun()
             state = INIT
+        elif(state==HEAD):
+            logEvent(LVL_INFORMATION, "Control head")
+            pan = input("pan ?")
+            tilt = input("tilt ?")
+            #print "pwm L: ", pl, ", pwm R: ", pr
+            head(int(pan), int(tilt))
+            ser.flushInput()
+            t = time.time()
+            while(not readEncoder()):
+                pass
+            time.sleep(1)
+            freerun()
+            state = INIT
+        elif(state==DRIVE):
+            logEvent(LVL_INFORMATION, "Starting drive mode")
+            direction = input("Direction (0: Turn left, 1: Turn right, 2: Forward, 3: Reverse)?")
+            speed  = 100 #input("speed (positive value)?")
+            steps  = input("steps (positive value)?")
+            ser.flushInput()
+            resetEncoder()
+            if(direction == 0):
+                control(-int(speed), int(speed), int(steps), int(steps), 10)
+            elif(direction == 1):
+                control(int(speed), -int(speed), int(steps), int(steps), 10)
+            elif(direction == 2):
+                control(int(speed), int(speed), int(steps), int(steps), 10)
+            else:
+                control(-int(speed), -int(speed), int(steps), int(steps), 10)
+            #state = INIT
         elif(state==CONTROL):
             logEvent(LVL_INFORMATION, "Starting Control mode")
             sl  = input("speed left ?")
@@ -257,6 +325,7 @@ try:
             el = input("steps left ?")
             er = input("steps right ?")
             t = input("timeout ?")
+            ser.flushInput()
             resetEncoder()
             control(int(sl), int(sr), int(el), int(er), int(t))
             state = INIT
@@ -278,6 +347,8 @@ try:
                 meanSpeedLeft = meanSpeedLeft/nb_values
                 meanSpeedRight = meanSpeedRight/nb_values
                 logEvent(LVL_INFORMATION, "CAL: Left [PWM="+str(i)+"; speed="+str(meanSpeedLeft)+"], Right [PWM="+str(i)+"; speed="+str(meanSpeedRight)+"]")
+            state = EXIT
+        elif(state==TEST):
             state = EXIT
         elif(state==EXIT):
             logEvent(LVL_INFORMATION, "Exiting session")

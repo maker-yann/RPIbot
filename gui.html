@@ -1,0 +1,196 @@
+<!DOCTYPE HTML>
+
+<html>
+   <head>
+     <title>RPIbot</title>
+     <link rel="stylesheet" type="text/css" href="{{ static_url("gui.css") }}">
+     <script type = "text/javascript">
+        var ws;
+        const STOP = 0;
+        const FORWARD = 1;
+        const BACKWARD = 2;
+        const LEFT = 3;
+        const RIGHT = 4;
+
+         function log(line) {
+            document.getElementById('log').innerHTML = document.getElementById('log').innerHTML + line + '\n';
+            document.getElementById('log').scrollTop = document.getElementById('log').scrollHeight;
+         }
+         function clearLog() {
+             document.getElementById('log').innerHTML = '';
+         }
+         
+         function updateControls() {
+            document.getElementById('speedvalue').value = document.getElementById('speedslider').value;
+         }
+
+         function sendMessage() {
+             if(ws != null){
+                 ws.send(document.getElementById('input').value);
+             }
+             log('Tx: '+document.getElementById('input').value);
+             document.getElementById('input').value = '';
+         }
+
+         function exit() {
+             if(ws != null){
+                 ws.send("exit");
+             }
+             log('Tx: exit');
+         }
+         
+         function move(direction) {
+             var command = ''
+             if(direction == FORWARD) command = "MOVE;"+document.getElementById('speedslider').value+";"+document.getElementById('speedslider').value+";200;200;15"
+             if(direction == BACKWARD) command = "MOVE;-"+document.getElementById('speedslider').value+";-"+document.getElementById('speedslider').value+";200;200;15"
+             if(direction == LEFT) command = "MOVE;-"+document.getElementById('speedslider').value+";"+document.getElementById('speedslider').value+";200;200;15"
+             if(direction == RIGHT) command = "MOVE;"+document.getElementById('speedslider').value+";-"+document.getElementById('speedslider').value+";200;200;15"
+             if(ws != null){
+                 ws.send(command);
+             }
+             log('Tx: '+command);
+         }
+         
+         function stop() {
+             if(ws != null){
+                 ws.send("STOP;");
+             }
+             log('Tx: STOP');
+         }
+         
+         function movehead() {
+            if(ws != null){
+                 ws.send("HEAD;"+document.getElementById('pan').value+";"+document.getElementById('tilt').value);
+                 log('Tx: Head('+document.getElementById('pan').value+", "+document.getElementById('tilt').value+")");
+            }
+         }
+
+         function WebSocketTest() {
+
+            if ("WebSocket" in window) {
+
+               ws = new WebSocket('ws://' + location.host+"/websocket");
+
+               ws.onopen = function() {
+
+                  document.getElementById("dist").style.backgroundColor = "green";
+                  log('Connection opened');
+               };
+
+               ws.onmessage = function (evt) {
+                  var obj;
+                  try {
+                         obj = JSON.parse(evt.data);
+                         document.getElementById('dist').value = obj.distance;
+                         document.getElementById('speedleft').value = obj.speedL;
+                         document.getElementById('posleft').value = obj.encoderL;
+                         document.getElementById('speedright').value = obj.speedR;
+                         document.getElementById('posright').value = obj.encoderR;
+                         document.getElementById('raw_encoderR').value = obj.raw_encoderR;
+                         document.getElementById('raw_encoderL').value = obj.raw_encoderL;
+                      } catch(e) {
+                         //document.getElementById('log').innerHTML += 'Rx: '+evt.data+'\n';
+                         log('Rx ok.');
+                      }
+               };
+
+               ws.onerror = function(event) {
+                  console.error("WebSocket error observed:", event);
+                  log('Error: '+event.data);
+               };
+
+               ws.onclose = function() {
+                  document.getElementById("dist").style.backgroundColor = "red";
+                  log('Connection closed');
+               };
+            } else {
+               // The browser doesn't support WebSocket
+               alert("WebSocket NOT supported by your Browser!");
+            }
+         }
+      </script>
+   </head>
+   <body onload="javascript:WebSocketTest()">
+       <div id="cam">
+           <input type="range" min="-100" max="100" value="0" step="1" id="pan" onchange="javascript:movehead()">
+           <canvas id="myCanvas" width="400" height="300" style="border:1px solid #000000;"></canvas>
+           <input type="range" min="-100" max="100" value="0" step="1" id="tilt" onchange="javascript:movehead()">
+       </div>
+<!--       <div id = "sse">
+           <a href = "javascript:WebSocketTest()">Connect to rpibot</a><br>
+           <a href = "javascript:exit()">Disconnect from rpibot</a>
+       </div>-->
+       <div id="robot_view">
+           <div id="robot">
+              <img src="{{ static_url("robot.png") }}" width="350px">
+           </div>
+           <div id="leftWheel">
+               <label for="speedleft">Speed</label>
+               <input type="text" id="speedleft" name="speedleft" required minlength="4" maxlength="8" size="4">
+               <label for="posleft">Position</label>
+               <input type="text" id="posleft" name="posleft" required minlength="4" maxlength="8" size="4">
+           </div>
+           <div id="rightWheel">
+               <label for="speedright">Speed</label>
+               <input type="text" id="speedright" name="speedright" required minlength="4" maxlength="8" size="4">
+               <label for="posright">Position</label>
+               <input type="text" id="posright" name="posright" required minlength="4" maxlength="8" size="4">
+           </div>
+           <div id="distance">
+               <label for="dist">Distance (us):</label>
+               <input type="text" id="dist" name="dist" required minlength="4" maxlength="8" size="4">
+           </div>
+           <div id="rawL">
+                <label for="raw_encoderL">Raw signal:</label>
+                <input type="text" id="raw_encoderL" name="raw_encoderL" required minlength="4" maxlength="8" size="4">
+           </div>
+           <div id="rawR">
+                <label for="raw_encoderR">Raw signal:</label>
+                <input type="text" id="raw_encoderR" name="raw_encoderR" required minlength="4" maxlength="8" size="4">
+           </div>
+       </div>
+      <div class="slidecontainer">
+          <fieldset>
+              <legend>Settings</legend>
+              <input type="range" min="0" max="150" value="70" class="slider" id="speedslider" onchange="javascript:updateControls()">
+              <label for="speedvalue">Speed:</label>
+              <input type="text" id="speedvalue" name="posleft" required minlength="4" maxlength="8" size="4" value="70">
+              <input type="range" min="0" max="100" value="0" class="slider" id="Reserved1">
+              <input type="range" min="0" max="100" value="0" class="slider" id="Reserved2">
+          </fieldset>
+      </div>
+      <div class="controls">
+          <fieldset>
+              <legend>Controls</legend>
+              <table>
+                <tbody>
+                  <tr>
+                    <td></td>
+                    <td><button onmousedown="javascript:move(FORWARD);" onmouseup="javascript:stop();">Forward</button></td>
+                    <td></td>
+                  </tr>
+                  <tr>
+                    <td><button onmousedown="javascript:move(LEFT);" onmouseup="javascript:stop();">Left</button></td>
+                    <td></td>
+                    <td><button onmousedown="javascript:move(RIGHT);" onmouseup="javascript:stop();">Right</button></td>
+                  </tr>
+                  <tr>
+                    <td></td>
+                    <td><button onmousedown="javascript:move(BACKWARD);" onmouseup="javascript:stop();">Reverse</button></td>
+                    <td></td>
+                  </tr>
+                </tbody>
+              </table>
+          </fieldset>
+      </div>
+      <div id="input_output">
+          <fieldset>
+              <legend>Input/Output:</legend>
+              <input type="text" id="input" required minlength="4" maxlength="8" size="90">
+              <button onclick="javascript:sendMessage();">Send</button>
+              <textarea id="log" name="messages" rows="5" cols="100"></textarea>
+              <button onclick="javascript:clearLog();">Clear log</button>
+          </fieldset>
+      </div>
+   </body>
+</html>
