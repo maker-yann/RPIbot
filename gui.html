@@ -4,7 +4,7 @@
    <head>
      <title>RPIbot</title>
      <link rel="stylesheet" type="text/css" href="{{ static_url("gui.css") }}">
-     <script type = "text/javascript">
+     <script type = "text/javascript">      
         var ws;
         const STOP = 0;
         const FORWARD = 1;
@@ -91,6 +91,7 @@
                       } catch(e) {
                          //document.getElementById('log').innerHTML += 'Rx: '+evt.data+'\n';
                          log('Rx ok.');
+                         document.getElementById("video").src = "data:image/jpeg;base64," + evt.data;
                       }
                };
 
@@ -113,7 +114,8 @@
    <body onload="javascript:WebSocketTest()">
        <div id="cam">
            <input type="range" min="-100" max="100" value="0" step="1" id="pan" onchange="javascript:movehead()">
-           <canvas id="myCanvas" width="400" height="300" style="border:1px solid #000000;"></canvas>
+           <!--<canvas id="myCanvas" width="400" height="300" style="border:1px solid #000000;"></canvas>-->
+           <img id="video"></img>
            <input type="range" min="-100" max="100" value="0" step="1" id="tilt" onchange="javascript:movehead()">
        </div>
 <!--       <div id = "sse">
