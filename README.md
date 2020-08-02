@@ -15,3 +15,5 @@ The hardware is based on:
 - an USB power pack with 2 outputs. Supports charge during use.
 - a free wheel
 - Chassis wood based with 3 long screws for distance
+
+![Alt HW diagram](/images/RPIbot_Hardware.jpg)
