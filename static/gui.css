@@ -132,13 +132,13 @@ label {
 #leftWheel {
     position: absolute;
     left: 0px;
-    top: 150px;
+    top: 80px;
 }
 
 #rightWheel {
     position: absolute;
     left: 290px;
-    top: 150px;
+    top: 80px;
 }
 
 #distance {
@@ -149,14 +149,14 @@ label {
 
 #rawL {
     position: absolute;
-    left: 100px;
-    top: 140px;
+    left: 120px;
+    top: 50px;
 }
 
 #rawR {
     position: absolute;
-    left: 200px;
-    top: 140px;
+    left: 180px;
+    top: 50px;
 }
 
 #robot_view {

@@ -19,9 +19,24 @@
          function clearLog() {
              document.getElementById('log').innerHTML = '';
          }
+
+        function handleVideoCheckboxClick(cb) {
+            if(cb.checked){
+                ws.send("video;on");
+                log('Tx: Video on');
+            }
+            else{
+                ws.send("video;off");
+                log('Tx: Video off');
+            }
+        }
          
          function updateControls() {
             document.getElementById('speedvalue').value = document.getElementById('speedslider').value;
+         }
+         
+         function updateTargetControls() {
+            document.getElementById('distancetarget').value = document.getElementById('target').value;
          }
 
          function sendMessage() {
@@ -41,10 +56,10 @@
          
          function move(direction) {
              var command = ''
-             if(direction == FORWARD) command = "MOVE;"+document.getElementById('speedslider').value+";"+document.getElementById('speedslider').value+";200;200;15"
-             if(direction == BACKWARD) command = "MOVE;-"+document.getElementById('speedslider').value+";-"+document.getElementById('speedslider').value+";200;200;15"
-             if(direction == LEFT) command = "MOVE;-"+document.getElementById('speedslider').value+";"+document.getElementById('speedslider').value+";200;200;15"
-             if(direction == RIGHT) command = "MOVE;"+document.getElementById('speedslider').value+";-"+document.getElementById('speedslider').value+";200;200;15"
+             if(direction == FORWARD) command = "MOVE;"+document.getElementById('speedslider').value+";"+document.getElementById('speedslider').value+";"+document.getElementById('target').value+";"+document.getElementById('target').value+";30"
+             if(direction == BACKWARD) command = "MOVE;-"+document.getElementById('speedslider').value+";-"+document.getElementById('speedslider').value+";"+document.getElementById('target').value+";"+document.getElementById('target').value+";30"
+             if(direction == LEFT) command = "MOVE;-"+document.getElementById('speedslider').value/2+";"+document.getElementById('speedslider').value/2+";"+document.getElementById('target').value+";"+document.getElementById('target').value+";30"
+             if(direction == RIGHT) command = "MOVE;"+document.getElementById('speedslider').value/2+";-"+document.getElementById('speedslider').value/2+";"+document.getElementById('target').value+";"+document.getElementById('target').value+";30"
              if(ws != null){
                  ws.send(command);
              }
@@ -86,11 +101,11 @@
                          document.getElementById('posleft').value = obj.encoderL;
                          document.getElementById('speedright').value = obj.speedR;
                          document.getElementById('posright').value = obj.encoderR;
-                         document.getElementById('raw_encoderR').value = obj.raw_encoderR;
-                         document.getElementById('raw_encoderL').value = obj.raw_encoderL;
+                         document.getElementById('yaw').value = obj.yaw;
+                         document.getElementById('odo').value = obj.odoDistance;
                       } catch(e) {
                          //document.getElementById('log').innerHTML += 'Rx: '+evt.data+'\n';
-                         log('Rx ok.');
+                         //log('Rx ok.');
                          document.getElementById("video").src = "data:image/jpeg;base64," + evt.data;
                       }
                };
@@ -115,7 +130,7 @@
        <div id="cam">
            <input type="range" min="-100" max="100" value="0" step="1" id="pan" onchange="javascript:movehead()">
            <!--<canvas id="myCanvas" width="400" height="300" style="border:1px solid #000000;"></canvas>-->
-           <img id="video"></img>
+           <img id="video" width="320"></img>
            <input type="range" min="-100" max="100" value="0" step="1" id="tilt" onchange="javascript:movehead()">
        </div>
 <!--       <div id = "sse">
@@ -143,22 +158,24 @@
                <input type="text" id="dist" name="dist" required minlength="4" maxlength="8" size="4">
            </div>
            <div id="rawL">
-                <label for="raw_encoderL">Raw signal:</label>
-                <input type="text" id="raw_encoderL" name="raw_encoderL" required minlength="4" maxlength="8" size="4">
+                <label for="yaw">Yaw:</label>
+                <input type="text" id="yaw" name="yaw" required minlength="4" maxlength="8" size="4">
            </div>
            <div id="rawR">
-                <label for="raw_encoderR">Raw signal:</label>
-                <input type="text" id="raw_encoderR" name="raw_encoderR" required minlength="4" maxlength="8" size="4">
+                <label for="odo">Odometer:</label>
+                <input type="text" id="odo" name="odo" required minlength="4" maxlength="8" size="4">
            </div>
        </div>
       <div class="slidecontainer">
           <fieldset>
               <legend>Settings</legend>
-              <input type="range" min="0" max="150" value="70" class="slider" id="speedslider" onchange="javascript:updateControls()">
+              <input type="range" min="0" max="150" value="50" strp="2" class="slider" id="speedslider" onchange="javascript:updateControls()">
               <label for="speedvalue">Speed:</label>
-              <input type="text" id="speedvalue" name="posleft" required minlength="4" maxlength="8" size="4" value="70">
-              <input type="range" min="0" max="100" value="0" class="slider" id="Reserved1">
-              <input type="range" min="0" max="100" value="0" class="slider" id="Reserved2">
+              <input type="text" id="speedvalue" name="posleft" required minlength="4" maxlength="8" size="4" value="50">
+              <input type="range" min="0" max="500" value="500" class="slider" id="target" onchange="javascript:updateTargetControls()">
+              <label for="speedvalue">Target distance:</label>
+              <input type="text" id="distancetarget" name="target" required minlength="4" maxlength="8" size="4" value="500">
+              <!--<input type="range" min="0" max="100" value="0" class="slider" id="Reserved2">-->
           </fieldset>
       </div>
       <div class="controls">
@@ -186,9 +203,10 @@
           </fieldset>
       </div>
       <div id="input_output">
+          <label><input type='checkbox' onclick='handleVideoCheckboxClick(this);'>Enable video</label>
           <fieldset>
               <legend>Input/Output:</legend>
-              <input type="text" id="input" required minlength="4" maxlength="8" size="90">
+              <input type="text" id="input" required minlength="4" maxlength="64" size="90">
               <button onclick="javascript:sendMessage();">Send</button>
               <textarea id="log" name="messages" rows="5" cols="100"></textarea>
               <button onclick="javascript:clearLog();">Clear log</button>
