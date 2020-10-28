@@ -1,0 +1,114 @@
+[Initial SD card setup]
+# SSH configuration
+Create file named "ssh" in the boot-Partition
+
+
+# Create file wpa_supplicant.conf in the boot-partition (will be copied into the right location at startup)
+# Check with iwconfig which SSID is connected
+country=DE
+ctrl_interface=DIR=/var/run/wpa_supplicant GROUP=netdev
+update_config=1
+network={
+       ssid="SSID1"
+       psk="PWD1"
+       key_mgmt=WPA-PSK
+       priority=1
+       id_str="EG"
+}
+
+network={
+       ssid="SSID2"
+       psk="PWD2"
+       key_mgmt=WPA-PSK
+       priority=2
+       id_str="OG"
+}
+
+network={
+       ssid="SSID3"
+       psk="PWD3"
+       key_mgmt=WPA-PSK
+       priority=3
+       id_str="UG"
+}
+
+[Update system with general files]
+
+sudo apt-get update
+sudo apt-get upgrade
+
+# copy shutdown script to PI (new version via systemd)
+git clone https://github.com/maker-yann/shutdownPi.git
+sudo cp /shutdownPi/shutdownPi.service /etc/systemd/system/
+sudo systemctl enable shutdownPi
+sudo systemctl start shutdownPi
+# check with htop
+ 
+[Update system with project specific installations]
+
+[Camera]
+#raspi-config: camera and SPI on
+
+sudo apt-get install python-smbus
+sudo apt-get install i2c-tools
+sudo i2cdetect -y 1 # 1 for new version of RPI
+
+sudo apt install python-pip
+sudo pip install Adafruit-PCA9685
+
+# Raspberry Pi temperature measurement
+/opt/vc/bin/vcgencmd measure_temp
+
+vcgencmd get_camera #check for camera
+raspistill -o cam.jpg # test cam
+
+sudo apt-get install python3-picamera
+python3 rpi_camera_surveillance_system.py (see example)
+Stream on //ip:8000
+
+[UART]
+Raspberry Pi 3 / Zero UART
+(https://www.raspberrypi.org/documentation/configuration/uart.md) 
+
+-PL011 UART is connected to the Bluetooth module
+   /dev/ttyAMA0 (/dev/serial1)
+   can be disconnected from Bluetooth and mapped to header:
+	sudo nano /boot/config.txt
+	# Add "dtoverlay=pi3-miniuart-bt" at the end of the file
+	sudo reboot
+
+-mini UART is used as the primary UART (Linux console)
+(not reliable as freq depending on CPU)
+  /dev/ttyS0 (/dev/serial0)
+	Must be detached from console by raspi-config
+
+# Install minicom (Exit: C^A Q)
+sudo apt-get install minicom
+# Set baudrate to setting from "dmesg|grep tty"
+sudo minicom -b 16550 -D /dev/ttyS0 -o # Can also set baudrate to something like 115200 !
+
+Cable from GPIO 14 to GPIO 15 (pin 8 and 10)
+
+Can also be done by "sudo cat /dev/ttyS0
+Sending:
+echo -ne '@K:1' > /dev/ttyS0
+echo -ne '@S:6000;0' > /dev/ttyS0
+
+#Install pyserial
+python -m pip install pyserial
+
+#solve slow ssh problem:
+sudo nano /etc/ssh/sshd_config # uncomment "UseDNS no"
+/etc/init.d/ssh restart
+
+[Nodemcu]
+GPIO 0, 2 or 15 not used during reset
+
+[tornado]
+pip install tornado
+
+[git: connect to independent remote repository]
+git remote add origin https://github.com/maker-yann/RPIbot.git
+git pull origin master --allow-unrelated-histories
+git push --all origin
+
