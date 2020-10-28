@@ -3,7 +3,7 @@ Simple and cheap servo controlled robot with raspberry pi zero
 
 This robot is a project to build a simple and cheap robot. It can be extended with functionalities.
 
-<img src="/images/rpibot_image.jpg?raw=true" width="480">
+<img src="/images/IMG_20201025_105224.jpg?raw=true" width="480">
 
 The hardware is based on: 
 - a raspberry pi zero board for the high level calculation
@@ -17,4 +17,4 @@ The hardware is based on:
 - a free wheel
 - Chassis wood based with 3 long screws for distance
 
-![HW diagram](/images/RPIbot_Hardware.jpg?raw=true)
+![HW diagram](/images/RPIbot_Hardware_V2.png?raw=true)
