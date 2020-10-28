@@ -46,7 +46,6 @@ class Application(tornado.web.Application):
     def __init__(self):
         handlers = [(r"/", webServerHandler), (r"/websocket", MyWebSocket)]
         settings = dict(
-            #template_path=os.path.join(os.path.dirname(__file__), "templates"),
             static_path=os.path.join(os.path.dirname(__file__), "static"),
         )
         super(Application, self).__init__(handlers, **settings)
@@ -128,12 +127,6 @@ def main():
         interrupted = True
     logger.debug("Main terminated with interrupt = " + str(interrupted))
     return interrupted
-
-
-# Queue from html WS server to motioncontrol
-#q_Command = Queue.Queue()
-# Queue from motioncontrol to WS html server
-#q_Data = Queue.Queue()
 
 # This is the main application to be called to run the whole robot
 if __name__ == '__main__':

@@ -54,8 +54,6 @@ class Sense(Thread):
         self.directionR = self.STP
         self.raw_encoder_L = 0
         self.raw_encoder_R = 0
-        #self.leftEncoderZero = 0
-        #self.rightEncoderZero = 0
         self.speedL = 0
         self.speedR = 0
         self.distance = 0

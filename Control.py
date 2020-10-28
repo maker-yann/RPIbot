@@ -89,8 +89,6 @@ class Actuation():
                 self.pwmR = self.MIDDLE - self.OFFSETS[self.RIGHT] - r
             self.pwm.set_pwm(self.LEFT, 0, self.pwmL)
             self.pwm.set_pwm(self.RIGHT, 0, self.pwmR)
-            #logger.debug("RUN: PWMs= "+str(self.pwmL)+", "+str(self.pwmR)+"; pl: "+str(l)+", pr: "+str(r))
-            #logger.debug("RUN -- Encod_l: %d; Encod_r: %d; Speed_l: %d; Speed_r: %d; PWM_L: %d; PWM_R: %d; PWR_L: %d; PWR_R: %d; Yaw: %d", self.encoderL, self.encoderR, self.speedL, self.speedR, self.pwmL, self.pwmR, l, r, yaw)
         else:
             if dirL != self.lastDirectionL:
                 self.motor_L.stop()
@@ -147,8 +145,8 @@ class Actuation():
         GPIO.output(self.GPIO_IN3, 0)
         GPIO.output(self.GPIO_IN4, 0)
 
-        self.motor_L = GPIO.PWM(self.GPIO_IN3, 100)  # frequency=50Hz
-        self.motor_R = GPIO.PWM(self.GPIO_IN1, 100)  # frequency=50Hz
+        self.motor_L = GPIO.PWM(self.GPIO_IN3, 100)  # frequency=100Hz
+        self.motor_R = GPIO.PWM(self.GPIO_IN1, 100)  # frequency=100Hz
 
     def freerun(self):
         self.pwm.set_pwm(self.LEFT, 0, 0)
@@ -208,13 +206,14 @@ class Control(Thread):
         self.lastFrameTimestamp = time.time()
         self.cycleTime = 0
         self._running = True
-        #self.initTrace()
+
         self.initParameters()
         self.actuation = Actuation(sensors)
         self.actuation.actuateHead(0, 0)
         time.sleep(0.5)
         self.actuation.freerun()
 
+### Initialize external tunable parameters
     def initParameters(self):
         self.parameters["Kp"] = 0.6
         self.parameters["Ki"] = 0.1
@@ -248,6 +247,7 @@ class Control(Thread):
     def terminate(self): 
         self._running = False
         
+### This function is not yet used. It will probably contain the image processing
     def idleTask(self):
         pass
 
@@ -352,8 +352,10 @@ class Control(Thread):
                     eSpeedR = 0
                 self.pr = int(self.parameters["Kp"]*eSpeedR+self.parameters["Ki"]*self.I_R)
                 
+                # This is the output for actuation
                 self.actuation.actuateWheels(self.pl, self.pr, self.directionL, self.directionR)
                 
+                # Here we copy some data to make it available in the trace/plot
                 self.cycleTime = int(round((time.time() - self.lastFrameTimestamp)*1000))
                 self.lastFrameTimestamp = time.time()
                 self.traceData = self.sensors.RT_data.copy()
@@ -371,29 +373,6 @@ class Control(Thread):
             self.I_L = 0
             self.I_R = 0
             self.Iyaw = 0
-
-    def IncrementalcloseLoopControl(self):
-        if((time.time() - self.t) < self.timeout):
-            if not self.checkTargetReached():
-                if(self.directionL*self.sensors.RT_data["speedL"] < int(self.leftSpeedTarget)):
-                    self.pl = self.pl + int(self.parameters["PWMinc"])
-                elif(self.directionL*self.sensors.RT_data["speedL"] > int(self.leftSpeedTarget)+self.SPEED_HYSTERESIS):
-                    pass
-                    #self.pl = self.pl - int(self.parameters["PWMinc"])
-                if self.pl < 0:
-                    self.pl = 0
-                if(self.directionR*self.sensors.RT_data["speedR"] < int(self.rightSpeedTarget)):
-                    self.pr = self.pr + int(self.parameters["PWMinc"])
-                elif(self.directionR*self.sensors.RT_data["speedR"] > int(self.rightSpeedTarget)+self.SPEED_HYSTERESIS):
-                    pass
-                    #self.pr = self.pr - int(self.parameters["PWMinc"])
-                if self.pr < 0:
-                    self.pr = 0
-                logger.debug(str(time.time())+" - pl: "+str(self.pl)+", speedL: "+str(self.sensors.RT_data["speedL"]))
-                self.actuation.actuateWheels(self.pl, self.pr, self.directionL, self.directionR, self.yawCorrection)
-                self.writeTrace()
-        else:
-            self.stop("timeout")
 
     def checkTargetReached(self):
         res = False
