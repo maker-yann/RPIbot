@@ -2,7 +2,10 @@
 
 import time
 import logging
-import ConfigParser
+try:
+    import ConfigParser as configparser
+except:
+    import configparser
 from threading import Thread
 import Adafruit_PCA9685
 import RPi.GPIO as GPIO
@@ -156,7 +159,8 @@ class Actuation():
 
     def readIni(self):
         logger.info("Read ini file")
-        Config = ConfigParser.ConfigParser()
+        #Config = ConfigParser.ConfigParser()
+        Config = configparser.ConfigParser()
         Config.read("config.ini")
         self.OFFSETS[self.LEFT] = Config.getint('motor', 'offset_left')
         self.OFFSETS[self.RIGHT] = Config.getint('motor', 'offset_right')
@@ -225,7 +229,8 @@ class Control(Thread):
         if(self.TRACE == 1):
             self.tracefile = open("trace.csv","w+")
             header = "timestamp;"
-            for k, v in self.traceData.iteritems():
+            #for k, v in self.traceData.iteritems():
+            for k, v in self.traceData.items():
                 header += k+";"
             header += "\r\n"
             self.tracefile.write(header)
@@ -237,7 +242,8 @@ class Control(Thread):
                 self.traceline = 1
             filestring = str(time.time())+";"
             displaystring = ""
-            for k, v in self.traceData.iteritems():
+            #for k, v in self.traceData.iteritems():
+            for k, v in self.traceData.items():
                 displaystring += k+": "+str(v)+", "
                 filestring += str(v)+";"
             filestring += "\r\n"

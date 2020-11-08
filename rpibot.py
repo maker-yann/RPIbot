@@ -12,7 +12,6 @@ import tornado.web
 import tornado.wsgi
 import tornado.websocket
 import json
-import Queue
 import os.path
 import signal
 import base64

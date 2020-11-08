@@ -10,7 +10,10 @@ from mpu9250_i2c import *
 import RPi.GPIO as GPIO
 import datetime
 import subprocess
-import ConfigParser
+try:
+    import ConfigParser as configparser
+except:
+    import configparser
 import sys
 import json
 from functools import partial
