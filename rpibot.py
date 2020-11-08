@@ -68,6 +68,9 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
         logger.info("WebSocket opened")
         self.camera = picamera.PiCamera(resolution=(640, 480))
         self.camera.rotation = 180
+        self.camera.start_preview()
+        # Camera warm-up time
+        time.sleep(2)
         self.gui_loop = PeriodicCallback(self.guiLoop, 500)
         self.gui_loop.start()
 
@@ -81,12 +84,15 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
             self.camera_loop.start()
         elif(message=="video;off"):
             self.camera_loop.stop()
+        elif(message=="pic"):
+            self.camera.capture('foo.jpg')
         else:
             c.runCommand(message)
 
     def cameraLoop(self):
         """Sends camera images in an infinite loop."""
-        sio = io.StringIO()
+        #sio = io.StringIO()
+        sio = io.BytesIO()
         self.camera.capture(sio, "jpeg", use_video_port=True)
         try:
             self.write_message(base64.b64encode(sio.getvalue()))
