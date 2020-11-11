@@ -112,3 +112,23 @@ git remote add origin https://github.com/maker-yann/RPIbot.git
 git pull origin master --allow-unrelated-histories
 git push --all origin
 
+[opencv]
+# Get latest packages
+sudo apt-get update && sudo apt-get dist-upgrade -y
+sudo apt-get update && sudo apt-get upgrade -y
+
+# Install needed packages to perform common I/O image/video operations and/or math calculations
+sudo apt-get update
+sudo apt-get install libhdf5-103 libhdf5-serial-dev libharfbuzz-dev liblapack-dev libcblas-dev libwebp-dev \
+  libilmbase-dev libopenexr-dev libgstreamer1.0-dev libjpeg-dev libtiff5-dev libjasper-dev libpng12-dev \
+  libavcodec-dev libavformat-dev libswscale-dev libv4l-dev libxvidcore-dev libx264-dev libatlas-base-dev \
+  gfortran libgstreamer1.0-dev libgtk-3-0 -y
+
+# Install Python 3 and pip
+sudo apt-get install python3 python3-pip -y
+
+# Install pre-built OpenCV python bindings with contrib modules
+pip3 install opencv-contrib-python-headless  # Use this line if you don't want GUI functionality
+# pip3 install opencv-contrib-python # Use this line if you want GUI functionality
+
+LD_PRELOAD=/usr/lib/arm-linux-gnueabihf/libatomic.so.1 python3 ...

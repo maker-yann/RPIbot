@@ -17,6 +17,8 @@ import signal
 import base64
 import hashlib
 import picamera
+import picamera.array
+import cv2
 try:
     import cStringIO as io
 except ImportError:
@@ -85,7 +87,14 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
         elif(message=="video;off"):
             self.camera_loop.stop()
         elif(message=="pic"):
-            self.camera.capture('foo.jpg')
+            #self.camera.capture('foo.jpg')
+            rawCapture = picamera.array.PiRGBArray(self.camera)
+            self.camera.capture(rawCapture, format="bgr")
+            image = rawCapture.array
+            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+            blurred = cv2.GaussianBlur(gray, (3, 3), 0)
+            output = cv2.Canny(blurred, 10, 200)
+            cv2.imwrite('picture.jpg', output)
         else:
             c.runCommand(message)
 
