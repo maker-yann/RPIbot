@@ -57,6 +57,7 @@ class webServerHandler(tornado.web.RequestHandler):
         self.render("gui.html")
 
 class MyWebSocket(tornado.websocket.WebSocketHandler):
+    
     camera = None
     camera_loop = None
     
@@ -73,6 +74,7 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
         self.camera.start_preview()
         # Camera warm-up time
         time.sleep(2)
+        self.visio = Vision.Vision(cam=self.camera)
         self.gui_loop = PeriodicCallback(self.guiLoop, 500)
         self.gui_loop.start()
 
@@ -87,14 +89,8 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
         elif(message=="video;off"):
             self.camera_loop.stop()
         elif(message=="pic"):
-            #self.camera.capture('foo.jpg')
-            rawCapture = picamera.array.PiRGBArray(self.camera)
-            self.camera.capture(rawCapture, format="bgr")
-            image = rawCapture.array
-            gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
-            blurred = cv2.GaussianBlur(gray, (3, 3), 0)
-            output = cv2.Canny(blurred, 10, 200)
-            cv2.imwrite('picture.jpg', output)
+            self.visio.capture()
+            self.visio.process()
         else:
             c.runCommand(message)
 
@@ -118,7 +114,7 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
             self.gui_loop.stop()
             logger.debug("gui loop stopped")
             time.sleep(1)
-            self.camera.close()
+            self.visio.close()
             self.camera = None
             logger.debug("camera closed")
         except:

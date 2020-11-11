@@ -11,13 +11,15 @@ logger.setLevel(logging.INFO)
 
 class Vision():
 
-    def __init__(self):
-        self.camera = picamera.PiCamera(resolution=(640, 480))
-        self.camera.rotation = 180
-        self.camera.start_preview()
-        # Camera warm-up time
-        time.sleep(2)
-        
+    def __init__(self, cam = None):
+        if cam is None:
+            self.camera = picamera.PiCamera(resolution=(640, 480))
+            self.camera.rotation = 180
+            self.camera.start_preview()
+            # Camera warm-up time
+            time.sleep(2)
+        else:
+            self.camera = cam
         self.image = None
         
     def close(self):
@@ -32,11 +34,11 @@ class Vision():
     def snapshot(self):
         self.camera.capture('foo.jpg')
         
-    def process(self):
+    def process(self, filename="test.jpg"):
         gray = cv2.cvtColor(self.image, cv2.COLOR_BGR2GRAY)
         blurred = cv2.GaussianBlur(gray, (3, 3), 0)
         output = cv2.Canny(blurred, 10, 200)
-        self.saveImage(output, "test.jpg")
+        self.saveImage(output, filename)
 
     def saveImage(self, output, filename):
         cv2.imwrite(filename, output)
@@ -58,10 +60,10 @@ if __name__ == '__main__':
         v.capture()
         v.process()
         v.close()
-        logger.debug("camera closed")
+        logger.info("camera closed")
     except KeyboardInterrupt:
         # Signal termination 
         logger.info("Keyboard interrupt. Terminate thread")
     finally:
-        logger.debug("Image processing finished")
+        logger.info("Image processing finished")
 
