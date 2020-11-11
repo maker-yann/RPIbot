@@ -2,7 +2,7 @@
 
 import time
 import logging
-import Sense, Control
+import Sense, Control, Vision
 
 from tornado.options import options, define, parse_command_line
 from tornado.ioloop import PeriodicCallback
