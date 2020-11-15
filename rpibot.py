@@ -90,15 +90,20 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
             self.camera_loop.stop()
         elif(message=="pic"):
             self.visio.capture()
+            self.visio.prepareImage()
             self.visio.process()
         else:
             c.runCommand(message)
 
     def cameraLoop(self):
         """Sends camera images in an infinite loop."""
-        #sio = io.StringIO()
-        sio = io.BytesIO()
-        self.camera.capture(sio, "jpeg", use_video_port=True)
+        #sio = io.BytesIO()
+        self.visio.capture()
+        self.visio.prepareImage()
+        self.visio.process()
+        is_success, im_buf_arr = cv2.imencode(".jpg", self.visio.image)
+        sio = io.BytesIO(im_buf_arr)
+        #self.camera.capture(sio, "jpeg", use_video_port=True)
         try:
             self.write_message(base64.b64encode(sio.getvalue()))
         except tornado.websocket.WebSocketClosedError:

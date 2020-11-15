@@ -67,17 +67,14 @@ class Vision():
         drawing = np.zeros((img.shape[0], img.shape[1], 3), dtype=np.uint8)
         for i in range(len(contours)):
             area = cv2.contourArea(contours[i])
-            leftmost = tuple(contours[i][contours[i][:,:,0].argmin()][0])
-            rightmost = tuple(contours[i][contours[i][:,:,0].argmax()][0])
-            topmost = tuple(contours[i][contours[i][:,:,1].argmin()][0])
+            #leftmost = tuple(contours[i][contours[i][:,:,0].argmin()][0])
+            #rightmost = tuple(contours[i][contours[i][:,:,0].argmax()][0])
+            #topmost = tuple(contours[i][contours[i][:,:,1].argmin()][0])
             bottommost = tuple(contours[i][contours[i][:,:,1].argmax()][0])
             if area > AREA_THRESHOLD:
-                #print(area)
                 color = (rng.randint(0,256), rng.randint(0,256), rng.randint(0,256))
-                #cv2.drawContours(drawing, contours, i, color, 2, cv2.LINE_8, hierarchy, 0)
                 cv2.drawContours(self.image, contours, i, color, 2, cv2.LINE_8, hierarchy, 0)
-        #self.saveImage(drawing, "contours.jpg")
-        self.saveImage(self.image, "contours.jpg")
+        #self.saveImage(self.image, "contours.jpg")
 
     def edgeDetectionSobel(self, filename="sobel.jpg"):
         # main treatment
@@ -94,7 +91,7 @@ class Vision():
         # Apply adaptiveThreshold at the bitwise_not of gray, notice the ~ symbol
         gray = cv2.bitwise_not(self.blurred)
         bw = cv2.adaptiveThreshold(gray, 255, cv2.ADAPTIVE_THRESH_MEAN_C, cv2.THRESH_BINARY, 15, -2)
-        self.saveImage(bw, "bw.jpg")
+        #self.saveImage(bw, "bw.jpg")
         # Create the images that will use to extract the horizontal and vertical lines
         horizontal = np.copy(bw)
         vertical = np.copy(bw)
@@ -117,8 +114,6 @@ class Vision():
         # Apply morphology operations
         vertical = cv2.erode(vertical, verticalStructure)
         vertical = cv2.dilate(vertical, verticalStructure)
-        # Inverse vertical image
-        #vertical = cv2.bitwise_not(vertical)
         
         # result output
         #self.saveImage(horizontal, "horizontal.jpg")
