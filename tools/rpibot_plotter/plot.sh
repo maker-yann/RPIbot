@@ -5,7 +5,7 @@ read ANTWORT
 if [ "$ANTWORT" == "y" ]
     then
 	echo "Copy file"
-	sshpass -p "raspberry" scp pi@rpibot:/home/pi/rpibot/trace.csv .
+	sshpass -p "raspberry" scp pi@rpibot:/home/pi/RPIbot/trace.csv .
     else
         echo "No file to copy."
 fi
