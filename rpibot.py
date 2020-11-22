@@ -68,7 +68,6 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
 
     def open(self):
         logger.info("WebSocket opened")
-        self.visio = Vision.Vision()
         self.gui_loop = PeriodicCallback(self.guiLoop, 500)
         self.gui_loop.start()
 
@@ -78,6 +77,7 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
             self.timer.cancel()
             self.close()
         elif(message=="video;on"):
+            v.imageProcessing()
             self.camera_loop = PeriodicCallback(self.cameraLoop, 1000)
             self.camera_loop.start()
         elif(message=="video;off"):
@@ -92,16 +92,14 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
     def cameraLoop(self):
         """Sends camera images in an infinite loop."""
         #sio = io.BytesIO()
-        self.visio.capture()
-        self.visio.prepareImage()
-        self.visio.process()
-        is_success, im_buf_arr = cv2.imencode(".jpg", self.visio.image)
-        sio = io.BytesIO(im_buf_arr)
-        #self.camera.capture(sio, "jpeg", use_video_port=True)
-        try:
-            self.write_message(base64.b64encode(sio.getvalue()))
-        except tornado.websocket.WebSocketClosedError:
-            self.camera_loop.stop()
+        if v.processing == False:
+            is_success, im_buf_arr = cv2.imencode(".jpg", v.image)
+            sio = io.BytesIO(im_buf_arr)
+            try:
+                self.write_message(base64.b64encode(sio.getvalue()))
+            except tornado.websocket.WebSocketClosedError:
+                self.camera_loop.stop()
+            v.imageProcessing()
 
     def on_close(self):
         logger.info("WebSocket closed")
@@ -113,7 +111,6 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
             self.gui_loop.stop()
             logger.debug("gui loop stopped")
             time.sleep(1)
-            self.visio.close()
             logger.debug("camera closed")
         except:
             raise
@@ -130,7 +127,6 @@ def main():
         logger.debug("Tornado loop start() finished")
     except KeyboardInterrupt:
         tornado.ioloop.IOLoop.instance().stop()
-        #q_Command.put("exit")
         logger.debug("User interrupt (main)")
         interrupted = True
     logger.debug("Main terminated with interrupt = " + str(interrupted))
@@ -145,6 +141,8 @@ if __name__ == '__main__':
     s.start()
     c = Control.Control(s)
     c.start()
+    v = Vision.Vision()
+    v.start()
     while(1):
         logger.info("Starting web server")
         interrupted = main()
@@ -154,9 +152,11 @@ if __name__ == '__main__':
     logger.info("User interrupt")
     s.terminate()
     c.terminate()
+    v.terminate()
     logger.debug("Main loop finished (__main__")
     # Wait for actual termination (if needed)
     c.join()
     s.join()
+    v.join()
     logger.info("terminated")
 

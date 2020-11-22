@@ -6,6 +6,7 @@ import picamera
 import picamera.array
 import cv2
 from fractions import Fraction
+from threading import Thread
 import numpy as np
 import random as rng
 
@@ -13,9 +14,13 @@ logger = logging.getLogger(__name__)
 logger.setLevel(logging.INFO)
 rng.seed(12345)
 
-class Vision():
+class Vision(Thread):
 
     def __init__(self, cam = None):
+        Thread.__init__(self)
+        self._running = True
+        self.processing = False
+
         if cam is None:
             #self.camera = picamera.PiCamera(resolution=(1280, 720), framerate=Fraction(1, 6), sensor_mode=3)
             self.camera = picamera.PiCamera(resolution=(640, 480))
@@ -39,7 +44,25 @@ class Vision():
             self.camera = cam
         self.image = None
         self.blurred = None
-        
+
+    def terminate(self): 
+        self._running = False
+
+    def run(self):
+        logger.debug('Vision thread running')
+        while self._running: 
+            ### Wait for command (call of runCommand by rpibot.py)
+            if(self.processing == True):
+                self.capture()
+                self.prepareImage()
+                self.process()
+                self.processing = False
+            #else:
+            #    self.idleTask()
+            time.sleep(0.05)
+        self.close() 
+        logger.debug('Vision thread terminating')
+
     def close(self):
         self.camera.close()
         self.camera = None
@@ -125,6 +148,9 @@ class Vision():
 
     def saveImage(self, output, filename):
         cv2.imwrite(filename, output)
+        
+    def imageProcessing(self):
+        self.processing = True
 
 # Run this if standalone (test purpose)
 if __name__ == '__main__':
@@ -138,18 +164,26 @@ if __name__ == '__main__':
     logger.addHandler(ch)
 
     try:
-        logger.info("Started image processing")
+        logger.info("Start image processing")
         v = Vision()
-        v.capture()
-        v.prepareImage()
-        #v.edgeDetectionSobel()
-        #v.edgeDetectionCanny()
-        v.process()
-        v.close()
+        logger.info("Created image processing thread")
+        v.start()
+        logger.info("Started image processing thread")
+        v.imageProcessing()
+        logger.info("Started image processing")
+        while v.processing == True:
+            time.sleep(0.1)
+            #print("waiting...")
         logger.info("camera closed")
     except KeyboardInterrupt:
         # Signal termination 
         logger.info("Keyboard interrupt. Terminate thread")
     finally:
         logger.info("Image processing finished")
+        v.terminate()
+        logger.debug("Thread terminated")
+
+        # Wait for actual termination (if needed)  
+        v.join()
+        logger.debug("Thread finished")
 
