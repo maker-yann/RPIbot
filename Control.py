@@ -321,15 +321,15 @@ class Control(Thread):
                 # Todo: to be changed wheel and direction individual
                 self.pl = self.OPEN_LOOP_PWM
                 self.pr = self.OPEN_LOOP_PWM
-                
+
                 self.actuation.actuateWheels(self.pl, self.pr, self.directionL, self.directionR)
-                
+
                 self.traceData = self.sensors.RT_data.copy()
                 self.traceData["CycleTime"] = self.cycleTime
                 self.writeTrace()
         else:
             self.stop("timeout")
-        
+
     def closeLoopControl(self):
         if((time.time() - self.t) < self.timeout):
             if not self.checkTargetReached():
@@ -344,7 +344,7 @@ class Control(Thread):
                 else:
                     self.yawCorrection = 0
                     self.Iyaw = 0
-                    
+
                 # Speed control left
                 eSpeedL = abs(self.leftSpeedTarget) - int(self.sensors.RT_data["speedL"]) - self.yawCorrection
                 self.I_L += eSpeedL
@@ -357,10 +357,10 @@ class Control(Thread):
                 if eSpeedR < 0:
                     eSpeedR = 0
                 self.pr = int(self.parameters["Kp"]*eSpeedR+self.parameters["Ki"]*self.I_R)
-                
+
                 # This is the output for actuation
                 self.actuation.actuateWheels(self.pl, self.pr, self.directionL, self.directionR)
-                
+
                 # Here we copy some data to make it available in the trace/plot
                 self.cycleTime = int(round((time.time() - self.lastFrameTimestamp)*1000))
                 self.lastFrameTimestamp = time.time()
@@ -382,7 +382,7 @@ class Control(Thread):
 
     def checkTargetReached(self):
         res = False
-        
+
         if ((self.sensors.RT_data["encoderL"] >= self.leftEncoderTarget) and 
             (self.sensors.RT_data["encoderR"] >= self.rightEncoderTarget) and 
             (self.directionL == self.FWD) and (self.directionR == self.FWD)):
