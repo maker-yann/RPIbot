@@ -58,7 +58,6 @@ class webServerHandler(tornado.web.RequestHandler):
 
 class MyWebSocket(tornado.websocket.WebSocketHandler):
     
-    camera = None
     camera_loop = None
     
     def check_origin(self, origin):
@@ -69,12 +68,7 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
 
     def open(self):
         logger.info("WebSocket opened")
-        self.camera = picamera.PiCamera(resolution=(640, 480))
-        self.camera.rotation = 180
-        self.camera.start_preview()
-        # Camera warm-up time
-        time.sleep(2)
-        self.visio = Vision.Vision(cam=self.camera)
+        self.visio = Vision.Vision()
         self.gui_loop = PeriodicCallback(self.guiLoop, 500)
         self.gui_loop.start()
 
@@ -120,7 +114,6 @@ class MyWebSocket(tornado.websocket.WebSocketHandler):
             logger.debug("gui loop stopped")
             time.sleep(1)
             self.visio.close()
-            self.camera = None
             logger.debug("camera closed")
         except:
             raise
